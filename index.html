@@ -45,16 +45,6 @@
         }
     </style>
 
-    <!-- ======================================================================
-         TEMA TERANG / GELAP — style tambahan murni, tidak menyentuh style
-         atau class yang sudah ada. Semua aturan di bawah hanya AKTIF saat
-         <body> punya class "theme-dark" (ditambahkan lewat toggle di
-         pojok kanan atas). Kelas Tailwind bawaan (bg-white, text-gray-900,
-         dst) di-override lewat selector body.theme-dark supaya seluruh
-         halaman — termasuk Beranda, Indikator, Sebaran Risiko, Tren,
-         Mitigasi, dan Asisten AI — ikut berganti tema tanpa mengubah
-         satu pun class di HTML asli.
-         ====================================================================== -->
     <style>
         body.theme-dark { background-color: #0f1115; color: #e5e7eb; }
         body.theme-dark .bg-brand-bg { background-color: #0f1115 !important; }
@@ -521,7 +511,6 @@
         </div>
       </div>
 
-      <!-- ================= SECTION: INDIKATOR (sensor terkini + kalibrasi) ================= -->
       <div id="view-indikator" class="h-full overflow-y-auto p-8 lg:p-10" style="display:none;">
           <header class="mb-8">
               <h2 class="text-[28px] font-heading font-extrabold text-black tracking-tight leading-tight">Indikator</h2>
@@ -600,7 +589,6 @@
               </div>
           </div>
 
-          <!-- ============ Serial Monitor (murni tambahan) ============ -->
           <div class="mt-6 bg-[#0d1117] rounded-[24px] shadow-sm border border-gray-800 overflow-hidden">
               <div class="flex items-center justify-between px-5 py-3.5 border-b border-white/5">
                   <div class="flex items-center gap-3">
@@ -617,7 +605,6 @@
           </div>
       </div>
 
-      <!-- ================= SECTION: SEBARAN RISIKO (peta full) ================= -->
       <div id="view-sebaran-risiko" class="h-full overflow-y-auto p-8 lg:p-10" style="display:none;">
           <header class="mb-8">
               <h2 class="text-[28px] font-heading font-extrabold text-black tracking-tight leading-tight">Sebaran Risiko</h2>
@@ -636,7 +623,6 @@
           </div>
       </div>
 
-      <!-- ================= SECTION: TREN (grafik historis) ================= -->
       <div id="view-tren" class="h-full overflow-y-auto p-8 lg:p-10" style="display:none;">
           <header class="mb-8">
               <h2 class="text-[28px] font-heading font-extrabold text-black tracking-tight leading-tight">Tren</h2>
@@ -689,7 +675,6 @@
           </svg>
       </div>
 
-      <!-- ================= SECTION: MITIGASI ================= -->
       <div id="view-mitigasi" class="h-full overflow-y-auto p-8 lg:p-10" style="display:none;">
           <header class="mb-8">
               <h2 class="text-[28px] font-heading font-extrabold text-black tracking-tight leading-tight">Mitigasi</h2>
@@ -713,7 +698,6 @@
           </div>
       </div>
 
-      <!-- ================= SECTION: ASISTEN AI (terpisah dari dashboard) ================= -->
       <div id="view-asisten-ai" class="h-full flex-col bg-white text-gray-800" style="display:none;">
           <!-- Top bar -->
           <div class="flex items-center justify-between px-8 py-6 border-b border-gray-100 shrink-0">
@@ -769,17 +753,9 @@
       </div>
     </main>
 
-    <!-- ======================================================================
-         FIREBASE REALTIME DATABASE INTEGRATION
-         ====================================================================== -->
     <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-database-compat.js"></script>
 
-    <!-- ======================================================================
-         PETA SEBARAN — Leaflet (vanilla JS, tanpa React, tanpa API key)
-         Dipakai di 2 tempat: mini map kartu dashboard & halaman penuh
-         "Sebaran Risiko". Logic-nya disatukan di sini biar konsisten.
-         ====================================================================== -->
     <script>
     (function () {
         // Titik kota (real koordinat, dipakai sebagai label lokasi tetap)
@@ -883,10 +859,6 @@
     </script>
 
     <script>
-    /* =====================================================================
-       1) KONFIGURASI — GANTI DENGAN MILIK ANDA SENDIRI
-       Ambil dari Firebase Console > Project settings > General > Your apps > SDK setup and configuration
-       ===================================================================== */
     const firebaseConfig = {
         apiKey: "GANTI_DENGAN_API_KEY_ANDA",
         authDomain: "GANTI.firebaseapp.com",
@@ -934,9 +906,6 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    /* =====================================================================
-       2) UTIL
-       ===================================================================== */
     const $ = (id) => document.getElementById(id);
     const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
     const lerp = (v, inMin, inMax, outMin, outMax) => {
@@ -1018,10 +987,6 @@
         return out;
     }
 
-    /* =====================================================================
-       3) ESTIMASI TMA & CURAH HUJAN DARI KELEMBABAN (KARENA TIDAK ADA
-          SENSOR TMA / RAIN GAUGE FISIK DI ESP32)
-       ===================================================================== */
 
     // Muka air gambut berkorelasi kuat dengan kelembaban lapisan atas gambut:
     // tanah makin lembab -> muka air makin dekat ke permukaan (aman);
@@ -1065,9 +1030,6 @@
         return arr;
     }
 
-    /* =====================================================================
-       4) RENDER DASHBOARD DARI DATA FIREBASE
-       ===================================================================== */
     function updateDashboard(data) {
         if (!data) return;
 
@@ -1229,12 +1191,6 @@
         document.dispatchEvent(new CustomEvent("peatapp:update"));
     }
 
-    /* =====================================================================
-       5) STATE AWAL — SEMUA ANGKA & GRAFIK DI POSISI NOL / NETRAL
-          Ditampilkan begitu halaman dibuka, SEBELUM ada data dari Firebase.
-          Begitu snapshot pertama datang, updateDashboard() akan menimpa
-          semua nilai ini dengan data sensor asli.
-       ===================================================================== */
     function resetDashboardToZero() {
         // --- Angka utama ---
         if ($("tma-value")) $("tma-value").textContent = "0.00";
@@ -1297,9 +1253,6 @@
 
     resetDashboardToZero();
 
-    /* =====================================================================
-       6) LISTENER REALTIME DARI FIREBASE
-       ===================================================================== */
     db.ref(ROOT_PATH).on("value", (snapshot) => {
         const data = snapshot.val();
         if (!data) {
@@ -1312,14 +1265,6 @@
     });
     </script>
 
-    <!-- ======================================================================
-         BADGE STATUS KONEKSI FIREBASE — script tambahan murni, memakai
-         object global "db" yang sudah dibuat di atas. Memantau path khusus
-         Firebase Realtime Database ".info/connected" (fitur bawaan Firebase
-         untuk tahu status koneksi client secara real-time) supaya user bisa
-         lihat langsung apakah dashboard betul-betul menerima data live dari
-         Firebase, atau masih memakai data contoh (demo/dummy).
-         ====================================================================== -->
     <script>
     (function () {
         const badge = document.getElementById("firebase-status-badge");
@@ -1357,9 +1302,6 @@
     })();
     </script>
 
-    <!-- ======================================================================
-         VIEW SWITCHER (Beranda <-> Asisten AI) + LOGIC CHAT UI (front-end only)
-         ====================================================================== -->
     <script>
     (function () {
         const NAV_ACTIVE = "flex items-center gap-4 px-5 py-3 bg-white/20 rounded-full font-semibold transition shadow-sm";
@@ -1384,11 +1326,6 @@
         const btnTanyaAsisten = document.getElementById("btn-tanya-asisten");
         if (btnTanyaAsisten) btnTanyaAsisten.addEventListener("click", () => switchView("asisten-ai"));
 
-        /* =================================================================
-           CHAT — front-end penuh, respons AI masih placeholder.
-           Ganti isi fungsi getAIResponse() di bawah untuk menyambungkan ke
-           API AI asli (Gemini/OpenAI/model lain) begitu siap.
-           ================================================================= */
         const chatState = { messages: [] };
         const chatGreeting = document.getElementById("chat-greeting");
         const chatMessagesEl = document.getElementById("chat-messages");
@@ -1464,14 +1401,6 @@
     })();
     </script>
 
-    <!-- ======================================================================
-         EXTENSION SCRIPT — mengaktifkan 4 halaman baru: Indikator,
-         Sebaran Risiko, Tren, Mitigasi. TIDAK mengubah script/HTML yang
-         sudah ada di atas — hanya menambahkan logic baru dan memakai
-         fungsi/variabel global yang sudah didefinisikan sebelumnya
-         ($, THRESHOLDS, estimateTMA, buildAreaLinePath, updateDashboard,
-         window.__peatApp, window.__createFullPeatMap, window.renderHotspots).
-         ====================================================================== -->
     <script>
     (function () {
         const navEls = Array.from(document.querySelectorAll("[data-view]"));
@@ -1486,11 +1415,6 @@
         const NAV_ACTIVE = "flex items-center gap-4 px-5 py-3 bg-white/20 rounded-full font-semibold transition shadow-sm";
         const NAV_INACTIVE = "flex items-center gap-4 px-5 py-3 hover:bg-white/10 rounded-full font-medium transition text-white/80 hover:text-white";
 
-        /* =================================================================
-           SWITCHER UTAMA — menangani SEMUA nav (Beranda, Indikator,
-           Sebaran Risiko, Tren, Asisten AI, Mitigasi), bukan cuma 2 seperti
-           script lama. Aman dipanggil bareng script view-switcher lama.
-           ================================================================= */
         function showAppView(viewKey) {
             Object.keys(VIEW_IDS).forEach((key) => {
                 const el = document.getElementById(VIEW_IDS[key]);
@@ -1535,9 +1459,6 @@
             }
         } catch (e) {}
 
-        /* =================================================================
-           1) INDIKATOR — pembacaan sensor terkini + kalibrasi ambang batas
-           ================================================================= */
         function renderIndikatorPage() {
             const lastData = window.__peatApp && window.__peatApp.lastData;
             const suhuEl = document.getElementById("indikator-suhu");
@@ -1656,9 +1577,6 @@
             showKalibrasiMsg._t = setTimeout(() => { el.textContent = ""; }, 4000);
         }
 
-        /* =================================================================
-           2) SEBARAN RISIKO — peta full + daftar titik panas
-           ================================================================= */
         let fullMapInstance = null;
         function initSebaranRisikoPage() {
             if (fullMapInstance) return;
@@ -1709,9 +1627,6 @@
             });
         }
 
-        /* =================================================================
-           3) TREN — grafik historis dari localStorage "riwayat_harian_sensor"
-           ================================================================= */
         function renderTrenPage() {
             let hist = [];
             try { hist = JSON.parse(localStorage.getItem("riwayat_harian_sensor") || "[]"); } catch (e) {}
@@ -1741,9 +1656,6 @@
             if (l) l.setAttribute("d", path.line);
         }
 
-        /* =================================================================
-           4) MITIGASI — banner status + checklist tindakan (tersimpan lokal)
-           ================================================================= */
         const MITIGASI_ITEMS = [
             { id: "sekat-kanal", title: "Penyekatan kanal gambut", desc: "Pasang / rawat sekat kanal agar muka air tetap tinggi di sekitar titik rawan." },
             { id: "sumur-bor", title: "Siapkan sumur bor cadangan", desc: "Pastikan sumur bor & pompa air siap dipakai untuk pembasahan darurat." },
@@ -1819,12 +1731,6 @@
             }
         }
 
-        /* =================================================================
-           5) REFRESH OTOMATIS setiap kali dashboard.js memancarkan event
-              "peatapp:update" (dipanggil dari updateDashboard() yang sudah
-              ada) — supaya Indikator, Tren & banner Mitigasi selalu sinkron
-              walau user sedang tidak membuka halaman itu.
-           ================================================================= */
         document.addEventListener("peatapp:update", () => {
             renderIndikatorPage();
             renderMitigasiBanner();
@@ -1836,18 +1742,6 @@
     })();
     </script>
 
-    <!-- ======================================================================
-         DEMO DATA SIMULATOR — mengisi 4 halaman baru (Indikator, Sebaran
-         Risiko, Tren, Mitigasi) dengan data contoh yang BERVARIASI selama
-         belum ada koneksi Firebase asli. Script ini murni TAMBAHAN — tidak
-         menyentuh satu baris pun kode di atas. Ia menunggu sebentar untuk
-         cek apakah data asli dari Firebase sudah masuk (window.__peatApp
-         .lastData); kalau BELUM, ia mengisi seluruh dashboard + 4 halaman
-         baru dengan data dummy acak lewat fungsi updateDashboard() yang
-         sudah ada, supaya semua graph langsung terlihat "hidup". Kalau
-         Firebase asli sudah terhubung dan mengirim data, simulator ini
-         otomatis tidak melakukan apa-apa (data asli tidak akan ditimpa).
-         ====================================================================== -->
     <script>
     (function () {
         function rand(min, max) { return Math.random() * (max - min) + min; }
@@ -1952,13 +1846,6 @@
     })();
     </script>
 
-    <!-- ======================================================================
-         TOGGLE TEMA TERANG / GELAP — script tambahan murni. Menyimpan
-         pilihan pengguna di localStorage ("app_theme") supaya tetap
-         konsisten walau halaman dibuka ulang. Bekerja dengan cara
-         menambah/menghapus class "theme-dark" di <body>, yang dibaca oleh
-         blok <style> tambahan di <head>.
-         ====================================================================== -->
     <script>
     (function () {
         const STORAGE_KEY = "app_theme"; // "light" | "dark"
@@ -1985,13 +1872,6 @@
     })();
     </script>
 
-    <!-- ======================================================================
-         SERIAL MONITOR (Indikator) — script tambahan murni. Menampilkan
-         log gaya terminal di bawah kartu Kalibrasi & Pembacaan Sensor,
-         memakai data yang sudah tersedia di window.__peatApp (diisi oleh
-         updateDashboard() yang sudah ada, baik dari Firebase asli maupun
-         dari simulator dummy). Tidak menambah listener Firebase baru.
-         ====================================================================== -->
     <script>
     (function () {
         const logEl = document.getElementById("serial-monitor-log");
