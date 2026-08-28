@@ -1,0 +1,1861 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prediksi Kebakaran Lahan Gambut</title>
+    <!-- Import Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet (peta interaktif, gratis, tanpa API key) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        heading: ['Poppins', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            red: '#e54545', // Sidebar red
+                            redlight: '#f05b5b',
+                            bg: '#fef5f4', // Main background pinkish white
+                            blue: '#0062ff', // Primary blue
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 10px;
+        }
+    </style>
+
+    <!-- ======================================================================
+         TEMA TERANG / GELAP — style tambahan murni, tidak menyentuh style
+         atau class yang sudah ada. Semua aturan di bawah hanya AKTIF saat
+         <body> punya class "theme-dark" (ditambahkan lewat toggle di
+         pojok kanan atas). Kelas Tailwind bawaan (bg-white, text-gray-900,
+         dst) di-override lewat selector body.theme-dark supaya seluruh
+         halaman — termasuk Beranda, Indikator, Sebaran Risiko, Tren,
+         Mitigasi, dan Asisten AI — ikut berganti tema tanpa mengubah
+         satu pun class di HTML asli.
+         ====================================================================== -->
+    <style>
+        body.theme-dark { background-color: #0f1115; color: #e5e7eb; }
+        body.theme-dark .bg-brand-bg { background-color: #0f1115 !important; }
+        body.theme-dark .bg-white { background-color: #1a1d24 !important; }
+        body.theme-dark .bg-gray-50 { background-color: #20232b !important; }
+        body.theme-dark .bg-gray-100 { background-color: #262a33 !important; }
+        body.theme-dark .bg-gray-200,
+        body.theme-dark .bg-gray-200\/70 { background-color: #2d313b !important; }
+        body.theme-dark .border-gray-100 { border-color: #262a33 !important; }
+        body.theme-dark .border-gray-200 { border-color: #2d313b !important; }
+        body.theme-dark .text-black,
+        body.theme-dark .text-gray-900,
+        body.theme-dark .text-gray-800 { color: #f1f5f9 !important; }
+        body.theme-dark .text-gray-600,
+        body.theme-dark .text-gray-500,
+        body.theme-dark .text-gray-400 { color: #9aa1af !important; }
+        body.theme-dark .text-gray-300 { color: #6b7280 !important; }
+        body.theme-dark .shadow-sm,
+        body.theme-dark .shadow-lg,
+        body.theme-dark .shadow-2xl { box-shadow: 0 4px 16px rgba(0,0,0,0.35) !important; }
+        body.theme-dark input,
+        body.theme-dark textarea { color: #f1f5f9 !important; }
+        body.theme-dark input::placeholder,
+        body.theme-dark textarea::placeholder { color: #6b7280 !important; }
+        body.theme-dark ::-webkit-scrollbar-thumb { background-color: #3a3f4b; }
+        /* Peta & elemen berbasis SVG/leaflet biarkan apa adanya supaya data tetap terbaca jelas */
+        body.theme-dark .leaflet-container { filter: brightness(0.92) contrast(1.05); }
+
+        /* Tombol toggle tema */
+        #theme-toggle-btn {
+            position: fixed;
+            top: 20px;
+            right: 24px;
+            z-index: 50;
+            width: 42px;
+            height: 42px;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+            border: 1px solid #f0f0f0;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.15s ease;
+        }
+        #theme-toggle-btn:hover { transform: scale(1.05); }
+        #theme-toggle-btn:active { transform: scale(0.95); }
+        body.theme-dark #theme-toggle-btn {
+            background: #1a1d24;
+            border-color: #2d313b;
+        }
+        #theme-toggle-btn .icon-sun { display: none; color: #f97316; }
+        #theme-toggle-btn .icon-moon { display: block; color: #0062ff; }
+        body.theme-dark #theme-toggle-btn .icon-sun { display: block; }
+        body.theme-dark #theme-toggle-btn .icon-moon { display: none; }
+    </style>
+</head>
+<body class="bg-brand-bg font-sans text-gray-800 h-screen w-full flex overflow-hidden selection:bg-brand-red selection:text-white">
+
+    <!-- Tombol Tema Terang / Gelap (murni tambahan, fixed position, tidak mengganggu layout) -->
+    <button id="theme-toggle-btn" type="button" title="Ganti tema terang / gelap" aria-label="Ganti tema terang / gelap">
+        <svg class="icon-moon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+        <svg class="icon-sun w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+    </button>
+
+    <!-- Sidebar -->
+    <aside class="w-[260px] bg-brand-red text-white flex flex-col h-full shrink-0 relative z-20 shadow-2xl rounded-r-3xl">
+        <!-- Logo -->
+        <div class="p-8 pt-10 pb-6">
+            <h1 class="text-3xl font-heading font-bold tracking-wide">Namanya</h1>
+        </div>
+        
+        <!-- Navigation -->
+        <nav class="flex-1 px-4 py-2 space-y-2 overflow-y-auto">
+            <!-- Active Item -->
+            <a href="#" id="nav-beranda" data-view="dashboard" class="flex items-center gap-4 px-5 py-3 bg-white/20 rounded-full font-semibold transition shadow-sm">
+                <!-- Home Icon -->
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                <span class="text-sm">Beranda</span>
+            </a>
+            <a href="#" id="nav-indikator" data-view="indikator" class="flex items-center gap-4 px-5 py-3 hover:bg-white/10 rounded-full font-medium transition text-white/80 hover:text-white">
+                <!-- Settings Icon -->
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                <span class="text-sm">Indikator</span>
+            </a>
+            <a href="#" id="nav-sebaran-risiko" data-view="sebaran-risiko" class="flex items-center gap-4 px-5 py-3 hover:bg-white/10 rounded-full font-medium transition text-white/80 hover:text-white">
+                <!-- Map Icon -->
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path></svg>
+                <span class="text-sm">Sebaran Risiko</span>
+            </a>
+            <a href="#" id="nav-tren" data-view="tren" class="flex items-center gap-4 px-5 py-3 hover:bg-white/10 rounded-full font-medium transition text-white/80 hover:text-white">
+                <!-- Chart Icon -->
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                <span class="text-sm">Tren</span>
+            </a>
+            <a href="#" id="nav-asisten-ai" data-view="asisten-ai" class="flex items-center gap-4 px-5 py-3 hover:bg-white/10 rounded-full font-medium transition text-white/80 hover:text-white">
+                <!-- AI Icon -->
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path></svg>
+                <span class="text-sm">Asisten AI</span>
+            </a>
+            <a href="#" id="nav-mitigasi" data-view="mitigasi" class="flex items-center gap-4 px-5 py-3 hover:bg-white/10 rounded-full font-medium transition text-white/80 hover:text-white">
+                <!-- Shield Icon -->
+                <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                <span class="text-sm">Mitigasi</span>
+            </a>
+        </nav>
+        
+        <!-- User Account -->
+        <div class="p-6 border-t border-white/10 mt-auto pb-8">
+            <p class="text-[10px] font-bold tracking-wider text-white mb-3">User Account</p>
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-white/30 shrink-0"></div>
+                <div class="overflow-hidden">
+                    <p class="text-sm font-semibold truncate leading-tight">User Account</p>
+                    <p class="text-xs text-white/80 truncate leading-tight">blabla@gmail.com</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-hidden flex flex-col">
+      <div id="view-dashboard" class="h-full overflow-y-auto p-8 lg:p-10">
+        <!-- Header -->
+        <header class="mb-8">
+            <h2 class="text-[28px] font-heading font-extrabold text-black tracking-tight leading-tight">Prediksi Kebakaran Lahan Gambut</h2>
+            <p class="text-gray-400 mt-1.5 text-sm font-medium">Welcome back, Blabla</p>
+        </header>
+
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+            <!-- Left Side (8 cols) -->
+            <div class="xl:col-span-8 flex flex-col gap-6">
+                
+                <!-- Row 1: 2 Cards (TMA & Kelembaban) -->
+                <div class="grid grid-cols-2 gap-6">
+                    <!-- Tinggi Muka Air -->
+                    <div class="bg-white rounded-[24px] p-6 shadow-sm flex items-center justify-between border border-gray-100">
+                        <div>
+                            <h3 class="text-gray-400 font-medium text-xs mb-2">Tinggi Muka Air</h3>
+                            <div class="flex items-baseline gap-1 mb-1">
+                                <span id="tma-value" class="text-[34px] font-bold text-gray-900 tracking-tight leading-none">45.00</span>
+                                <span class="text-gray-900 font-bold text-base">cm</span>
+                            </div>
+                            <div id="tma-trend" class="text-[#10b981] text-[9px] font-semibold flex items-center gap-1 mt-2">
+                                <svg id="tma-trend-icon" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                                <span id="tma-trend-text">5.2% up than last month</span>
+                            </div>
+                        </div>
+                        <div id="tma-bars" class="flex items-end gap-1.5 h-16 mr-1">
+                            <div class="w-[7px] bg-[#93c5fd] rounded-[2px] h-[40%]"></div>
+                            <div class="w-[7px] bg-[#60a5fa] rounded-[2px] h-[60%]"></div>
+                            <div class="w-[7px] bg-[#2563eb] rounded-[2px] h-[80%]"></div>
+                            <div class="w-[7px] bg-[#93c5fd] rounded-[2px] h-[30%]"></div>
+                            <div class="w-[7px] bg-[#1e40af] rounded-[2px] h-[100%]"></div>
+                        </div>
+                    </div>
+
+                    <!-- Kelembaban Tanah -->
+                    <div class="bg-white rounded-[24px] p-6 shadow-sm flex items-center justify-between border border-gray-100">
+                        <div>
+                            <h3 class="text-gray-400 font-medium text-xs mb-2">Kelembaban Tanah</h3>
+                            <div class="flex items-baseline gap-1 mb-1">
+                                <span id="kelembaban-value" class="text-[34px] font-bold text-gray-900 tracking-tight leading-none">52.00</span>
+                                <span class="text-gray-900 font-bold text-base">%</span>
+                            </div>
+                            <div id="kelembaban-trend" class="text-[#10b981] text-[9px] font-semibold flex items-center gap-1 mt-2">
+                                <svg id="kelembaban-trend-icon" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                                <span id="kelembaban-trend-text">5.2% up than last month</span>
+                            </div>
+                        </div>
+                        <div id="kelembaban-bars" class="flex items-end gap-1.5 h-16 mr-1">
+                            <div class="w-[7px] bg-[#93c5fd] rounded-[2px] h-[50%]"></div>
+                            <div class="w-[7px] bg-[#60a5fa] rounded-[2px] h-[70%]"></div>
+                            <div class="w-[7px] bg-[#2563eb] rounded-[2px] h-[90%]"></div>
+                            <div class="w-[7px] bg-[#93c5fd] rounded-[2px] h-[40%]"></div>
+                            <div class="w-[7px] bg-[#1e40af] rounded-[2px] h-[100%]"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row 2: 3 Cards -->
+                <div class="grid grid-cols-3 gap-6">
+                    <!-- Curah Hujan 7 Hari -->
+                    <div class="bg-white rounded-[24px] p-5 shadow-sm border border-gray-100 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center gap-2 mb-2">
+                                <h3 class="text-gray-400 font-medium text-[11px]">Curah Hujan 7 Hari</h3>
+                                <div class="w-3 h-3 rounded-[3px] border border-[#10b981] flex items-center justify-center">
+                                    <svg class="w-2 h-2 text-[#10b981]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                </div>
+                            </div>
+                            <div class="flex items-baseline gap-1 mb-3">
+                                <span id="hujan7-value" class="text-[26px] font-bold text-gray-900 tracking-tight leading-none">18.00</span>
+                                <span class="text-gray-900 font-bold text-xs">mm</span>
+                            </div>
+                        </div>
+                        <div class="mt-auto">
+                            <!-- Perfect Area + Line Chart -->
+                            <svg class="w-full h-[45px] overflow-visible" viewBox="0 0 100 40" preserveAspectRatio="none">
+                                <defs>
+                                    <linearGradient id="areaGrad7" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="#0062ff" stop-opacity="0.3"/>
+                                        <stop offset="100%" stop-color="#0062ff" stop-opacity="0"/>
+                                    </linearGradient>
+                                </defs>
+                                <!-- Area Path (starts bottom-left, follows line, ends bottom-right) -->
+                                <path id="hujan7-area" d="M0,40 L0,25 L16,15 L33,22 L50,5 L66,28 L83,18 L100,25 L100,40 Z" fill="url(#areaGrad7)" />
+                                <!-- Line Path -->
+                                <path id="hujan7-line" d="M0,25 L16,15 L33,22 L50,5 L66,28 L83,18 L100,25" fill="none" stroke="#0062ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <div class="flex justify-between text-[8px] text-gray-300 mt-2 font-bold uppercase px-1">
+                                <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Curah Hujan 1 Bulan -->
+                    <div class="bg-white rounded-[24px] p-5 shadow-sm border border-gray-100 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center gap-2 mb-2">
+                                <h3 class="text-gray-400 font-medium text-[11px]">Curah Hujan 1 Bulan</h3>
+                                <div class="w-3 h-3 rounded-[3px] border border-[#ef4444] flex items-center justify-center">
+                                     <svg class="w-2 h-2 text-[#ef4444]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                </div>
+                            </div>
+                            <div class="flex items-baseline gap-1 mb-3">
+                                <span id="hujan30-value" class="text-[26px] font-bold text-gray-900 tracking-tight leading-none">11.00</span>
+                                <span class="text-gray-900 font-bold text-xs">mm</span>
+                            </div>
+                        </div>
+                        <div class="mt-auto">
+                            <!-- Perfect Area + Line Chart -->
+                            <svg class="w-full h-[45px] overflow-visible" viewBox="0 0 100 40" preserveAspectRatio="none">
+                                <defs>
+                                    <linearGradient id="areaGrad30" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="#0062ff" stop-opacity="0.3"/>
+                                        <stop offset="100%" stop-color="#0062ff" stop-opacity="0"/>
+                                    </linearGradient>
+                                </defs>
+                                <!-- Area Path -->
+                                <path id="hujan30-area" d="M0,40 L0,15 L9,25 L18,10 L27,20 L36,5 L45,15 L54,10 L63,22 L72,5 L81,15 L90,25 L100,10 L100,40 Z" fill="url(#areaGrad30)" />
+                                <!-- Line Path -->
+                                <path id="hujan30-line" d="M0,15 L9,25 L18,10 L27,20 L36,5 L45,15 L54,10 L63,22 L72,5 L81,15 L90,25 L100,10" fill="none" stroke="#0062ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <div class="flex justify-between text-[7px] text-gray-300 mt-2 font-bold uppercase px-0.5">
+                                <span>J</span><span>F</span><span>M</span><span>A</span><span>M</span><span>J</span><span>J</span><span>A</span><span>S</span><span>O</span><span>N</span><span>D</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Hari Tanpa Hujan -->
+                    <div class="bg-white rounded-[24px] p-5 shadow-sm border border-gray-100 flex flex-col justify-between">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-gray-400 font-medium text-[11px]">Hari Tanpa Hujan</h3>
+                            <span id="hth-status" class="text-[8px] bg-[#fff7ed] text-[#f97316] px-2 py-0.5 rounded-full font-bold border border-[#ffedd5]">Status : Sedang</span>
+                        </div>
+                        <div id="hth-grid" class="grid grid-cols-5 gap-1.5 mb-1 px-1">
+                            <!-- Row 1 -->
+                            <div data-cell="0" class="w-full aspect-square bg-[#0062ff] rounded-[4px]"></div>
+                            <div data-cell="1" class="w-full aspect-square bg-[#0062ff] rounded-[4px]"></div>
+                            <div data-cell="2" class="w-full aspect-square bg-[#0062ff] rounded-[4px]"></div>
+                            <div data-cell="3" class="w-full aspect-square bg-[#0062ff] rounded-[4px]"></div>
+                            <div data-cell="4" class="w-full aspect-square bg-[#0062ff] rounded-[4px]"></div>
+                            <!-- Row 2 -->
+                            <div data-cell="5" class="w-full aspect-square bg-[#e54545] rounded-[4px]"></div>
+                            <div data-cell="6" class="w-full aspect-square bg-[#e54545] rounded-[4px]"></div>
+                            <div data-cell="7" class="w-full aspect-square bg-[#0062ff] rounded-[4px]"></div>
+                            <div data-cell="8" class="w-full aspect-square bg-[#e54545] rounded-[4px]"></div>
+                            <div data-cell="9" class="w-full aspect-square bg-[#0062ff] rounded-[4px]"></div>
+                            <!-- Row 3 -->
+                            <div data-cell="10" class="w-full aspect-square bg-[#e54545] rounded-[4px]"></div>
+                            <div data-cell="11" class="w-full aspect-square bg-[#e54545] rounded-[4px]"></div>
+                            <div data-cell="12" class="w-full aspect-square bg-[#e54545] rounded-[4px]"></div>
+                            <div data-cell="13" class="w-full aspect-square bg-[#e54545] rounded-[4px]"></div>
+                            <div data-cell="14" class="w-full aspect-square bg-[#e54545] rounded-[4px]"></div>
+                        </div>
+                        <div class="flex justify-center gap-3 text-[9px] text-gray-400 font-bold mt-2">
+                            <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-full bg-[#0062ff]"></div>hujan</div>
+                            <div class="flex items-center gap-1"><div class="w-2.5 h-2.5 rounded-full bg-[#e54545]"></div>kering</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analisis Faktor Risiko -->
+                <div class="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 flex-1">
+                    <h3 class="text-[19px] font-heading font-extrabold text-gray-900 mb-1">Analisis Faktor Risiko</h3>
+                    <p class="text-[11px] text-gray-400 font-medium mb-6">Kontribusi masing-masing faktor terhadap risiko kebakaran lahan gambut</p>
+                    
+                    <div class="space-y-4">
+                        <!-- Item 1 -->
+                        <div class="flex items-center gap-4">
+                            <div class="w-[34px] h-[34px] rounded-full bg-[#4485f4] flex items-center justify-center shrink-0 text-white shadow-sm">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            </div>
+                            <div class="w-36 text-[13px] font-semibold text-gray-800">Tinggi Muka Air</div>
+                            <div class="flex-1 bg-gray-50 h-[14px] rounded-full overflow-hidden p-[2px] border border-gray-100">
+                                <div id="factor-tma-bar" class="h-full bg-gradient-to-r from-[#0062ff] to-transparent rounded-full" style="width: 85%"></div>
+                            </div>
+                        </div>
+                        <!-- Item 2 -->
+                        <div class="flex items-center gap-4">
+                            <div class="w-[34px] h-[34px] rounded-full bg-[#4485f4] flex items-center justify-center shrink-0 text-white shadow-sm">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>
+                            </div>
+                            <div class="w-36 text-[13px] font-semibold text-gray-800">Kelembaban Tanah</div>
+                            <div class="flex-1 bg-gray-50 h-[14px] rounded-full overflow-hidden p-[2px] border border-gray-100">
+                                <div id="factor-kelembaban-bar" class="h-full bg-gradient-to-r from-[#0062ff] to-transparent rounded-full" style="width: 55%"></div>
+                            </div>
+                        </div>
+                        <!-- Item 3 -->
+                        <div class="flex items-center gap-4">
+                            <div class="w-[34px] h-[34px] rounded-full bg-[#4485f4] flex items-center justify-center shrink-0 text-white shadow-sm">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
+                            </div>
+                            <div class="w-36 text-[13px] font-semibold text-gray-800">Curah Hujan</div>
+                            <div class="flex-1 bg-gray-50 h-[14px] rounded-full overflow-hidden p-[2px] border border-gray-100">
+                                <div id="factor-hujan-bar" class="h-full bg-gradient-to-r from-[#0062ff] to-transparent rounded-full" style="width: 70%"></div>
+                            </div>
+                        </div>
+                        <!-- Item 4 -->
+                        <div class="flex items-center gap-4">
+                            <div class="w-[34px] h-[34px] rounded-full bg-[#4485f4] flex items-center justify-center shrink-0 text-white shadow-sm">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            </div>
+                            <div class="w-36 text-[13px] font-semibold text-gray-800">Hari Tanpa Hujan</div>
+                            <div class="flex-1 bg-gray-50 h-[14px] rounded-full overflow-hidden p-[2px] border border-gray-100">
+                                <div id="factor-hth-bar" class="h-full bg-gradient-to-r from-[#0062ff] to-transparent rounded-full" style="width: 40%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alert Box -->
+                <div id="alert-box" class="bg-[#ef4444] rounded-[24px] p-6 text-white flex items-center gap-5 shadow-[0_4px_16px_rgba(239,68,68,0.25)] relative overflow-hidden h-[120px]">
+                    <div class="absolute top-4 left-6 text-white/20 font-bold text-sm tracking-wider">ICO...</div>
+                    <div class="w-12 h-12 rounded-full border border-white/60 flex items-center justify-center shrink-0 mt-3 relative z-10">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+                    </div>
+                    <div class="flex-1 pr-32 relative z-10 mt-3">
+                        <p id="alert-message" class="text-[13px] font-medium leading-relaxed opacity-90">Karena TMA di bawah ambang batas dan curah hujan rendah, prioritaskan penyekatan kanal & siapkan sumur bor cadangan.</p>
+                    </div>
+                    <div class="absolute bottom-5 right-5 z-10">
+                        <button class="px-5 py-2.5 text-[11px] font-bold border border-white hover:bg-white hover:text-[#ef4444] rounded-full transition flex items-center gap-2">
+                            Lihat Mitigasi <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                        </button>
+                    </div>
+                    <div class="absolute top-1/2 right-[180px] flex gap-1 z-10">
+                        <div class="w-1 h-1 rounded-full bg-white/50"></div>
+                        <div class="w-1 h-1 rounded-full bg-white/50"></div>
+                        <div class="w-1 h-1 rounded-full bg-white/50"></div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Side (4 cols) -->
+            <div class="xl:col-span-4 flex flex-col gap-6">
+                <!-- Skor Risiko -->
+                <div class="bg-white rounded-[24px] p-6 pb-8 shadow-sm border border-gray-100 flex flex-col items-center flex-1">
+                    <div class="w-full flex justify-start mb-2">
+                        <h3 class="text-[17px] font-heading font-extrabold text-gray-900">Skor Risiko</h3>
+                    </div>
+                    
+                    <div class="relative w-[210px] h-[210px]">
+                        <!-- Arc Chart SVG -->
+                        <svg viewBox="0 0 100 100" class="absolute inset-0 w-full h-full">
+                            <defs>
+                               <linearGradient id="arcGrad" x1="100%" y1="100%" x2="0%" y2="0%">
+                                   <stop offset="0%" stop-color="#3b82f6" />
+                                   <stop offset="50%" stop-color="#8b5cf6" />
+                                   <stop offset="100%" stop-color="#ef4444" />
+                               </linearGradient>
+                           </defs>
+                           <!-- Background Arc -->
+                           <path d="M 21.71 78.28 A 40 40 0 1 1 78.28 78.28" fill="none" stroke="#f3f4f6" stroke-width="12" stroke-linecap="round"/>
+                           
+                           <!-- Foreground Arc (Value 75%) -->
+                           <path id="risk-arc-fg" d="M 21.71 78.28 A 40 40 0 1 1 78.28 78.28" fill="none" stroke="url(#arcGrad)" stroke-width="12" stroke-linecap="round" stroke-dasharray="188.5" stroke-dashoffset="47" />
+                       </svg>
+                        
+                        <!-- Center Text -->
+                        <div class="absolute inset-0 flex flex-col items-center justify-center mt-3">
+                            <div class="flex items-baseline">
+                                <span id="risk-score-value" class="text-6xl font-bold text-gray-900 tracking-tighter">75</span>
+                                <span class="text-2xl text-gray-400 font-bold ml-1">%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h4 id="risk-score-label" class="text-2xl font-bold text-[#e14242] mt-2">Tinggi</h4>
+                    <p id="risk-score-desc" class="text-[9px] text-gray-400 text-center mt-3 leading-relaxed px-6 font-medium">
+                        penjelasan blablabla jahbsjfhsd jkzjff jsdk zjhshbd llsd kshf asjdjip ijSjdi jshf ndfl nsjdhsj zkic zhbcm hbc
+                    </p>
+                </div>
+
+                <!-- Peta Sebaran -->
+                <div class="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 flex-1 min-h-[220px] flex flex-col">
+                    <div class="w-full flex justify-start mb-4">
+                        <h3 class="text-[17px] font-heading font-extrabold text-gray-900">Peta Sebaran</h3>
+                    </div>
+                    <div class="flex-1 w-full bg-[#e3f4e8] rounded-xl overflow-hidden relative shadow-inner">
+                        <!-- Peta interaktif (Leaflet + OpenStreetMap) -->
+                        <div id="peta-sebaran-map" class="absolute inset-0 z-0"></div>
+                    </div>
+                </div>
+
+                <!-- Button -->
+                <button id="btn-tanya-asisten" class="bg-[#0062ff] hover:bg-blue-700 text-white font-semibold py-4 rounded-[12px] shadow-[0_4px_14px_rgba(0,98,255,0.25)] w-full transition active:scale-[0.98] text-[15px]">
+                    Tanya Asisten AI
+                </button>
+            </div>
+        </div>
+      </div>
+
+      <!-- ================= SECTION: INDIKATOR (sensor terkini + kalibrasi) ================= -->
+      <div id="view-indikator" class="h-full overflow-y-auto p-8 lg:p-10" style="display:none;">
+          <header class="mb-8">
+              <h2 class="text-[28px] font-heading font-extrabold text-black tracking-tight leading-tight">Indikator</h2>
+              <p class="text-gray-400 mt-1.5 text-sm font-medium">Pembacaan sensor terkini & kalibrasi ambang batas risiko</p>
+          </header>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <!-- Pembacaan sensor terkini -->
+              <div class="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100">
+                  <h3 class="text-[17px] font-heading font-extrabold text-gray-900 mb-1">Pembacaan Sensor Terkini</h3>
+                  <p class="text-[11px] text-gray-400 font-medium mb-6">Data mentah langsung dari ESP32 lewat Firebase</p>
+                  <div class="grid grid-cols-3 gap-4">
+                      <div class="bg-gray-50 rounded-2xl p-4 text-center">
+                          <p class="text-gray-400 text-[10px] font-semibold uppercase mb-1">Suhu</p>
+                          <p id="indikator-suhu" class="text-2xl font-bold text-gray-900">-</p>
+                          <p class="text-gray-400 text-[10px]">°C</p>
+                      </div>
+                      <div class="bg-gray-50 rounded-2xl p-4 text-center">
+                          <p class="text-gray-400 text-[10px] font-semibold uppercase mb-1">Kelembaban Udara</p>
+                          <p id="indikator-udara" class="text-2xl font-bold text-gray-900">-</p>
+                          <p class="text-gray-400 text-[10px]">%</p>
+                      </div>
+                      <div class="bg-gray-50 rounded-2xl p-4 text-center">
+                          <p class="text-gray-400 text-[10px] font-semibold uppercase mb-1">Kelembaban Tanah</p>
+                          <p id="indikator-tanah" class="text-2xl font-bold text-gray-900">-</p>
+                          <p class="text-gray-400 text-[10px]">%</p>
+                      </div>
+                  </div>
+                  <p id="indikator-status" class="text-[11px] text-gray-400 font-medium mt-4">Menunggu data dari Firebase...</p>
+              </div>
+
+              <!-- Kalibrasi ambang batas -->
+              <div class="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100">
+                  <h3 class="text-[17px] font-heading font-extrabold text-gray-900 mb-1">Kalibrasi Ambang Batas</h3>
+                  <p class="text-[11px] text-gray-400 font-medium mb-6">Sesuaikan formula skor risiko — perubahan langsung dihitung ulang ke data terakhir</p>
+
+                  <div class="space-y-4">
+                      <div class="grid grid-cols-2 gap-4">
+                          <label class="block">
+                              <span class="text-xs font-semibold text-gray-600">TMA Aman (cm)</span>
+                              <input id="input-tma-aman" type="number" step="1" class="mt-1 w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm font-semibold text-gray-900 focus:outline-none focus:border-brand-blue" />
+                          </label>
+                          <label class="block">
+                              <span class="text-xs font-semibold text-gray-600">TMA Kritis (cm)</span>
+                              <input id="input-tma-kritis" type="number" step="1" class="mt-1 w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm font-semibold text-gray-900 focus:outline-none focus:border-brand-blue" />
+                          </label>
+                      </div>
+
+                      <div>
+                          <p class="text-xs font-semibold text-gray-600 mb-2">Bobot Faktor Risiko <span id="indikator-bobot-total" class="text-gray-400 font-normal"></span></p>
+                          <div class="space-y-3">
+                              <div>
+                                  <div class="flex justify-between text-[11px] text-gray-500 mb-1"><span>Tinggi Muka Air</span><span id="label-w-tma">35%</span></div>
+                                  <input id="input-w-tma" type="range" min="0" max="1" step="0.05" class="w-full accent-brand-blue" />
+                              </div>
+                              <div>
+                                  <div class="flex justify-between text-[11px] text-gray-500 mb-1"><span>Kelembaban Tanah</span><span id="label-w-kelembaban">25%</span></div>
+                                  <input id="input-w-kelembaban" type="range" min="0" max="1" step="0.05" class="w-full accent-brand-blue" />
+                              </div>
+                              <div>
+                                  <div class="flex justify-between text-[11px] text-gray-500 mb-1"><span>Curah Hujan</span><span id="label-w-hujan">20%</span></div>
+                                  <input id="input-w-hujan" type="range" min="0" max="1" step="0.05" class="w-full accent-brand-blue" />
+                              </div>
+                              <div>
+                                  <div class="flex justify-between text-[11px] text-gray-500 mb-1"><span>Hari Tanpa Hujan</span><span id="label-w-hth">20%</span></div>
+                                  <input id="input-w-hth" type="range" min="0" max="1" step="0.05" class="w-full accent-brand-blue" />
+                              </div>
+                          </div>
+                      </div>
+
+                      <button id="btn-simpan-kalibrasi" class="w-full bg-[#0062ff] hover:bg-blue-700 text-white font-semibold py-3 rounded-[12px] transition active:scale-[0.98] text-sm">
+                          Simpan & Hitung Ulang
+                      </button>
+                      <p id="indikator-saved-msg" class="text-[11px] text-[#10b981] font-semibold text-center h-4"></p>
+                  </div>
+              </div>
+          </div>
+      </div>
+
+      <!-- ================= SECTION: SEBARAN RISIKO (peta full) ================= -->
+      <div id="view-sebaran-risiko" class="h-full overflow-y-auto p-8 lg:p-10" style="display:none;">
+          <header class="mb-8">
+              <h2 class="text-[28px] font-heading font-extrabold text-black tracking-tight leading-tight">Sebaran Risiko</h2>
+              <p class="text-gray-400 mt-1.5 text-sm font-medium">Peta titik panas & lokasi pemantauan lahan gambut</p>
+          </header>
+
+          <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+              <div class="xl:col-span-8 bg-white rounded-[24px] p-4 shadow-sm border border-gray-100" style="min-height:500px;">
+                  <div id="peta-sebaran-map-full" class="w-full h-full rounded-xl" style="min-height:480px;"></div>
+              </div>
+              <div class="xl:col-span-4 bg-white rounded-[24px] p-6 shadow-sm border border-gray-100">
+                  <h3 class="text-[17px] font-heading font-extrabold text-gray-900 mb-1">Daftar Titik Panas</h3>
+                  <p class="text-[11px] text-gray-400 font-medium mb-4">Klik salah satu untuk fokus peta ke titik itu</p>
+                  <div id="hotspot-list" class="space-y-2 max-h-[420px] overflow-y-auto"></div>
+              </div>
+          </div>
+      </div>
+
+      <!-- ================= SECTION: TREN (grafik historis) ================= -->
+      <div id="view-tren" class="h-full overflow-y-auto p-8 lg:p-10" style="display:none;">
+          <header class="mb-8">
+              <h2 class="text-[28px] font-heading font-extrabold text-black tracking-tight leading-tight">Tren</h2>
+              <p class="text-gray-400 mt-1.5 text-sm font-medium">Riwayat pembacaan sensor dari waktu ke waktu (tersimpan otomatis tiap hari)</p>
+          </header>
+
+          <div id="tren-empty" class="bg-white rounded-[24px] p-10 shadow-sm border border-gray-100 text-center text-gray-400 text-sm font-medium">
+              Belum ada cukup riwayat data. Grafik akan muncul otomatis setelah dashboard menerima data dari Firebase selama beberapa hari.
+          </div>
+
+          <div id="tren-charts" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div class="bg-white rounded-[24px] p-5 shadow-sm border border-gray-100">
+                  <h3 class="text-[13px] font-heading font-bold text-gray-900 mb-3">Tinggi Muka Air (cm)</h3>
+                  <svg class="w-full h-[120px] overflow-visible" viewBox="0 0 100 40" preserveAspectRatio="none">
+                      <path id="tren-tma-area" fill="url(#trenGradTma)" />
+                      <path id="tren-tma-line" fill="none" stroke="#0062ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+              </div>
+              <div class="bg-white rounded-[24px] p-5 shadow-sm border border-gray-100">
+                  <h3 class="text-[13px] font-heading font-bold text-gray-900 mb-3">Kelembaban Tanah (%)</h3>
+                  <svg class="w-full h-[120px] overflow-visible" viewBox="0 0 100 40" preserveAspectRatio="none">
+                      <path id="tren-kelembaban-area" fill="url(#trenGradKel)" />
+                      <path id="tren-kelembaban-line" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+              </div>
+              <div class="bg-white rounded-[24px] p-5 shadow-sm border border-gray-100">
+                  <h3 class="text-[13px] font-heading font-bold text-gray-900 mb-3">Estimasi Curah Hujan (mm)</h3>
+                  <svg class="w-full h-[120px] overflow-visible" viewBox="0 0 100 40" preserveAspectRatio="none">
+                      <path id="tren-hujan-area" fill="url(#trenGradHujan)" />
+                      <path id="tren-hujan-line" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+              </div>
+          </div>
+
+          <svg width="0" height="0" style="position:absolute">
+              <defs>
+                  <linearGradient id="trenGradTma" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#0062ff" stop-opacity="0.25"/>
+                      <stop offset="100%" stop-color="#0062ff" stop-opacity="0"/>
+                  </linearGradient>
+                  <linearGradient id="trenGradKel" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#10b981" stop-opacity="0.25"/>
+                      <stop offset="100%" stop-color="#10b981" stop-opacity="0"/>
+                  </linearGradient>
+                  <linearGradient id="trenGradHujan" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#f97316" stop-opacity="0.25"/>
+                      <stop offset="100%" stop-color="#f97316" stop-opacity="0"/>
+                  </linearGradient>
+              </defs>
+          </svg>
+      </div>
+
+      <!-- ================= SECTION: MITIGASI ================= -->
+      <div id="view-mitigasi" class="h-full overflow-y-auto p-8 lg:p-10" style="display:none;">
+          <header class="mb-8">
+              <h2 class="text-[28px] font-heading font-extrabold text-black tracking-tight leading-tight">Mitigasi</h2>
+              <p class="text-gray-400 mt-1.5 text-sm font-medium">Langkah pencegahan kebakaran lahan gambut, diprioritaskan sesuai kondisi terkini</p>
+          </header>
+
+          <div id="mitigasi-banner" class="rounded-[24px] p-6 mb-6 text-white flex items-center gap-4 shadow-sm" style="background:#9ca3af;">
+              <div class="w-12 h-12 rounded-full border border-white/60 flex items-center justify-center shrink-0">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+              </div>
+              <div>
+                  <p id="mitigasi-banner-title" class="font-bold text-lg">Menunggu data sensor</p>
+                  <p id="mitigasi-banner-desc" class="text-sm opacity-90">Rekomendasi prioritas akan muncul otomatis begitu data Firebase masuk.</p>
+              </div>
+          </div>
+
+          <div class="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100">
+              <h3 class="text-[17px] font-heading font-extrabold text-gray-900 mb-1">Checklist Tindakan Mitigasi</h3>
+              <p class="text-[11px] text-gray-400 font-medium mb-6">Centang yang sudah dikerjakan — tersimpan otomatis di perangkat ini</p>
+              <div id="mitigasi-checklist" class="space-y-3"></div>
+          </div>
+      </div>
+
+      <!-- ================= SECTION: ASISTEN AI (terpisah dari dashboard) ================= -->
+      <div id="view-asisten-ai" class="h-full flex-col bg-white text-gray-800" style="display:none;">
+          <!-- Top bar -->
+          <div class="flex items-center justify-between px-8 py-6 border-b border-gray-100 shrink-0">
+              <div>
+                  <h2 class="text-[22px] font-heading font-extrabold text-gray-900 tracking-tight">Asisten AI</h2>
+                  <p class="text-gray-400 text-xs mt-1 font-medium">Tanya apa saja soal risiko kebakaran lahan gambut</p>
+              </div>
+              <div class="w-9 h-9 rounded-full bg-gradient-to-br from-brand-blue to-purple-500 flex items-center justify-center text-white text-sm font-bold shrink-0">A</div>
+          </div>
+
+          <!-- Chat area -->
+          <div id="chat-scroll" class="flex-1 overflow-y-auto px-8 py-8">
+              <div id="chat-greeting" class="h-full min-h-[300px] flex flex-col items-start justify-center w-full">
+                  <p class="text-gray-400 text-lg font-medium mb-1">Halo,</p>
+                  <h3 class="text-[32px] md:text-[40px] font-heading font-extrabold leading-tight bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 bg-clip-text text-transparent">
+                      Sebaiknya kita mulai dari mana?
+                  </h3>
+              </div>
+              <div id="chat-messages" class="hidden w-full"></div>
+          </div>
+
+          <!-- Input -->
+          <div class="px-8 pb-8 shrink-0">
+              <div class="w-full bg-gray-50 border border-gray-200 rounded-[24px] p-3 shadow-sm">
+                  <textarea id="chat-input" rows="1" placeholder="Minta Asisten AI..."
+                      class="w-full bg-transparent resize-none outline-none text-sm text-gray-800 placeholder-gray-400 px-3 py-2 max-h-32"></textarea>
+                  <div class="flex items-center justify-between px-2 pt-1">
+                      <div class="flex items-center gap-2">
+                          <button type="button" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200/70 text-gray-400 transition" title="Lampirkan (belum aktif)">
+                              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                          </button>
+                          <button type="button" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-gray-200/70 text-gray-400 text-xs font-medium transition" title="Alat (belum aktif)">
+                              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                              Alat
+                          </button>
+                      </div>
+                      <div class="flex items-center gap-2">
+                          <button type="button" class="flex items-center gap-1 px-3 py-1.5 rounded-full hover:bg-gray-200/70 text-gray-400 text-xs font-semibold transition" title="Model (belum aktif)">
+                              Pro
+                              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                          </button>
+                          <button type="button" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200/70 text-gray-400 transition" title="Rekam suara (belum aktif)">
+                              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"></path></svg>
+                          </button>
+                          <button id="chat-send-btn" type="button" class="w-9 h-9 flex items-center justify-center rounded-full bg-brand-blue hover:bg-blue-700 text-white transition shrink-0" title="Kirim">
+                              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19V5m0 0l-6 6m6-6l6 6"></path></svg>
+                          </button>
+                      </div>
+                  </div>
+              </div>
+              <p class="text-center text-[10px] text-gray-400 mt-3">Ini tampilan UI — respons belum terhubung ke model AI. Sambungkan lewat fungsi <code class="text-gray-500">getAIResponse()</code> di script.</p>
+          </div>
+      </div>
+    </main>
+
+    <!-- ======================================================================
+         FIREBASE REALTIME DATABASE INTEGRATION
+         ====================================================================== -->
+    <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.1/firebase-database-compat.js"></script>
+
+    <!-- ======================================================================
+         PETA SEBARAN — Leaflet (vanilla JS, tanpa React, tanpa API key)
+         Dipakai di 2 tempat: mini map kartu dashboard & halaman penuh
+         "Sebaran Risiko". Logic-nya disatukan di sini biar konsisten.
+         ====================================================================== -->
+    <script>
+    (function () {
+        // Titik kota (real koordinat, dipakai sebagai label lokasi tetap)
+        const cities = [
+            { name: "Pekanbaru",   lat: -0.5071, lng: 101.4478 },
+            { name: "Payakumbuh",  lat: -0.2297, lng: 100.6304 },
+            { name: "Bukittinggi", lat: -0.3055, lng: 100.3692 },
+        ];
+
+        // Titik hotspot demo (dipakai kalau Firebase belum kirim data.hotspots).
+        // Begitu ESP32/Firebase kirim node "hotspots" berisi array {name,lat,lng},
+        // titik-titik ini otomatis diganti data asli lewat window.renderHotspots().
+        const demoHotspots = [
+            { name: "Titik Panas 1", lat: -0.35, lng: 101.55 },
+            { name: "Titik Panas 2", lat: -0.62, lng: 100.95 },
+            { name: "Titik Panas 3", lat: -0.15, lng: 100.55 },
+            { name: "Titik Panas 4", lat: -0.48, lng: 100.30 },
+            { name: "Titik Panas 5", lat: -0.72, lng: 101.10 },
+        ];
+
+        const cityIcon = L.divIcon({
+            className: "",
+            html: '<div class="w-2.5 h-2.5 bg-red-600 rounded-full shadow-sm border-2 border-white"></div>',
+            iconSize: [10, 10],
+            iconAnchor: [5, 5],
+        });
+        const hotspotIcon = L.divIcon({
+            className: "",
+            html: '<div class="w-2 h-2 bg-red-600 rounded-full border border-white/70 opacity-80"></div>',
+            iconSize: [8, 8],
+            iconAnchor: [4, 4],
+        });
+
+        // Registry semua instance map yang sudah dibuat, supaya
+        // window.renderHotspots() bisa nyiram semuanya sekaligus.
+        const mapInstances = [];
+
+        function createPeatMap(containerId, { zoom = 8, list = null } = {}) {
+            const map = L.map(containerId, {
+                zoomControl: true,
+                attributionControl: false,
+                scrollWheelZoom: false, // biar gak "nyangkut" scroll saat user scroll halaman
+            }).setView([-0.45, 100.9], zoom);
+
+            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                maxZoom: 18,
+            }).addTo(map);
+
+            cities.forEach((c) => {
+                L.marker([c.lat, c.lng], { icon: cityIcon })
+                    .addTo(map)
+                    .bindTooltip(c.name, { direction: "top", offset: [0, -6] })
+                    .bindPopup(
+                        `<div class="text-xs"><p class="font-semibold text-gray-900">${c.name}</p>` +
+                        `<p class="text-gray-400">${c.lat.toFixed(4)}, ${c.lng.toFixed(4)}</p></div>`
+                    );
+            });
+
+            const hotspotLayer = L.layerGroup().addTo(map);
+            const markerByIndex = [];
+
+            function renderHotspots(points) {
+                hotspotLayer.clearLayers();
+                markerByIndex.length = 0;
+                (points || []).forEach((p) => {
+                    if (typeof p.lat !== "number" || typeof p.lng !== "number") return;
+                    const marker = L.marker([p.lat, p.lng], { icon: hotspotIcon })
+                        .addTo(hotspotLayer)
+                        .bindPopup(
+                            `<div class="text-xs"><p class="font-semibold text-gray-900">${p.name || "Titik Panas"}</p>` +
+                            `<p class="text-gray-400">${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}</p></div>`
+                        );
+                    markerByIndex.push(marker);
+                });
+                if (typeof list === "function") list(points || []);
+            }
+
+            const instance = { map, renderHotspots, markerByIndex };
+            mapInstances.push(instance);
+            renderHotspots(demoHotspots);
+            return instance;
+        }
+
+        // Mini map di kartu dashboard, dibuat langsung karena kartunya
+        // selalu ada di DOM (view dashboard tampil dari awal).
+        const miniMap = createPeatMap("peta-sebaran-map", { zoom: 8 });
+        setTimeout(() => miniMap.map.invalidateSize(), 200);
+        window.addEventListener("resize", () => mapInstances.forEach((i) => i.map.invalidateSize()));
+
+        // Dipanggil dari updateDashboard() kalau Firebase punya node "hotspots" —
+        // nyiram SEMUA instance map yang sudah dibuat (mini + full, kalau ada).
+        window.renderHotspots = function (points) {
+            mapInstances.forEach((i) => i.renderHotspots(points));
+        };
+
+        // Dipakai halaman "Sebaran Risiko" untuk bikin map full-page secara
+        // lazy (baru dibuat pas pertama kali halamannya dibuka).
+        window.__createFullPeatMap = createPeatMap;
+        window.__peatMapDemoHotspots = demoHotspots;
+    })();
+    </script>
+
+    <script>
+    /* =====================================================================
+       1) KONFIGURASI — GANTI DENGAN MILIK ANDA SENDIRI
+       Ambil dari Firebase Console > Project settings > General > Your apps > SDK setup and configuration
+       ===================================================================== */
+    const firebaseConfig = {
+        apiKey: "GANTI_DENGAN_API_KEY_ANDA",
+        authDomain: "GANTI.firebaseapp.com",
+        databaseURL: "https://GANTI-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "GANTI",
+        storageBucket: "GANTI.appspot.com",
+        messagingSenderId: "GANTI",
+        appId: "GANTI"
+    };
+
+    /* Path root di Realtime Database tempat ESP32 menulis data.
+
+       ESP32 kamu HANYA punya 2 sensor: DHT22 (suhu + kelembaban udara) dan
+       soil moisture (kelembaban tanah). Tidak ada sensor tinggi muka air (TMA)
+       maupun rain gauge. Maka struktur JSON yang DIHARAPKAN dari ESP32 cukup
+       sesederhana ini:
+
+       sensor/
+         suhu              : number   -> suhu udara (°C) dari DHT22
+         kelembaban_udara  : number   -> kelembaban udara (%) dari DHT22
+         kelembaban_tanah  : number   -> kelembaban tanah (%) dari soil sensor
+
+       Contoh kode ESP32 (Arduino, pakai Firebase ESP Client) untuk kirim data:
+         Firebase.setFloat(fbdo, "/sensor/suhu", dht.readTemperature());
+         Firebase.setFloat(fbdo, "/sensor/kelembaban_udara", dht.readHumidity());
+         Firebase.setFloat(fbdo, "/sensor/kelembaban_tanah", soilPercent);
+
+       Karena TMA & curah hujan TIDAK punya sensor fisik, keduanya DIESTIMASI
+       otomatis di browser (lihat bagian 2 & 3 di bawah) supaya kartu-kartu
+       tersebut tetap "hidup" dan berguna. Begitu kamu pasang sensor TMA asli
+       atau rain gauge asli, tinggal kirim field "tma" / "curah_hujan" dari
+       ESP32 dan kode di bawah otomatis akan pakai data asli (lihat komentar
+       "PAKAI DATA ASLI JIKA ADA" di updateDashboard). */
+    const ROOT_PATH = "sensor";
+
+    /* Ambang batas untuk perhitungan skor risiko — SESUAIKAN dengan acuan
+       ilmiah/skripsi Anda. Ini adalah formula heuristik sederhana supaya
+       dashboard "hidup", bukan model prediksi baku. */
+    const THRESHOLDS = {
+        tmaAman: 40,       // cm, muka air di titik ini dianggap aman
+        tmaKritis: 90,     // cm, muka air di titik ini dianggap sangat kritis
+        weights: { tma: 0.35, kelembaban: 0.25, hujan: 0.20, hth: 0.20 }
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    /* =====================================================================
+       2) UTIL
+       ===================================================================== */
+    const $ = (id) => document.getElementById(id);
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+    const lerp = (v, inMin, inMax, outMin, outMax) => {
+        if (inMax === inMin) return outMin;
+        const t = clamp((v - inMin) / (inMax - inMin), 0, 1);
+        return outMin + t * (outMax - outMin);
+    };
+    const todayKey = () => new Date().toISOString().slice(0, 10);
+
+    // Riwayat lokal (di browser) untuk menggambar 5 mini-bar TMA & Kelembaban,
+    // karena ESP32 biasanya hanya mengirim pembacaan terbaru, bukan riwayat.
+    function pushHistory(key, value, maxLen = 5) {
+        const storeKey = "riwayat_" + key;
+        let arr = JSON.parse(localStorage.getItem(storeKey) || "[]");
+        arr.push(value);
+        if (arr.length > maxLen) arr = arr.slice(arr.length - maxLen);
+        localStorage.setItem(storeKey, JSON.stringify(arr));
+        return arr;
+    }
+
+    function updateMiniBars(containerId, values) {
+        const container = $(containerId);
+        if (!container) return;
+        const bars = container.querySelectorAll(":scope > div");
+        const max = Math.max(...values, 0.0001);
+        const min = Math.min(...values, 0);
+        bars.forEach((bar, i) => {
+            const v = values[i];
+            if (v === undefined) return;
+            const pct = clamp(lerp(v, min, max, 25, 100), 25, 100);
+            bar.style.height = pct + "%";
+        });
+    }
+
+    function updateTrend(trendTextId, trendIconId, trendWrapId, values) {
+        if (values.length < 2) return;
+        const prev = values[values.length - 2];
+        const curr = values[values.length - 1];
+        const diffPct = prev === 0 ? 0 : ((curr - prev) / Math.abs(prev)) * 100;
+        const isUp = diffPct >= 0;
+        const wrap = $(trendWrapId), icon = $(trendIconId), text = $(trendTextId);
+        if (text) text.textContent = `${Math.abs(diffPct).toFixed(1)}% ${isUp ? "up" : "down"} dari sebelumnya`;
+        if (wrap) wrap.classList.remove("text-[#10b981]", "text-[#ef4444]");
+        if (wrap) wrap.classList.add(isUp ? "text-[#10b981]" : "text-[#ef4444]");
+        if (icon) icon.style.transform = isUp ? "rotate(0deg)" : "rotate(180deg)";
+    }
+
+    // Menghasilkan path SVG area+line dari array angka, mengikuti viewBox "0 0 100 40"
+    // yang SAMA PERSIS dengan viewBox asli di layout — jadi bentuk grafik tetap
+    // konsisten dengan desain, hanya titik datanya yang berubah.
+    function buildAreaLinePath(values) {
+        const n = values.length;
+        if (n < 2) return { area: "", line: "" };
+        const max = Math.max(...values, 0.0001);
+        const min = Math.min(...values, 0);
+        const points = values.map((v, i) => {
+            const x = (i / (n - 1)) * 100;
+            const y = lerp(v, min, max, 35, 5); // 5 (atas) .. 35 (bawah), sisakan margin
+            return [x, y];
+        });
+        const line = "M" + points.map(p => p.join(",")).join(" L");
+        const area = `M0,40 L${points.map(p => p.join(",")).join(" L")} L100,40 Z`;
+        return { area, line };
+    }
+
+    // Meringkas sebuah array (bisa < atau > n) menjadi TEPAT n titik dengan
+    // rata-rata per bucket. Dipakai untuk mengubah riwayat harian (variabel
+    // panjang) jadi 12 titik untuk grafik "Curah Hujan 1 Bulan".
+    function resampleTo(values, n) {
+        if (values.length === 0) return new Array(n).fill(0);
+        const out = [];
+        for (let i = 0; i < n; i++) {
+            const start = Math.floor((i / n) * values.length);
+            const end = Math.max(start + 1, Math.floor(((i + 1) / n) * values.length));
+            const slice = values.slice(start, end);
+            const avg = slice.reduce((a, b) => a + b, 0) / (slice.length || 1);
+            out.push(avg);
+        }
+        return out;
+    }
+
+    /* =====================================================================
+       3) ESTIMASI TMA & CURAH HUJAN DARI KELEMBABAN (KARENA TIDAK ADA
+          SENSOR TMA / RAIN GAUGE FISIK DI ESP32)
+       ===================================================================== */
+
+    // Muka air gambut berkorelasi kuat dengan kelembaban lapisan atas gambut:
+    // tanah makin lembab -> muka air makin dekat ke permukaan (aman);
+    // tanah makin kering -> muka air makin dalam (kritis).
+    function estimateTMA(kelembabanTanah) {
+        return lerp(kelembabanTanah, 100, 0, THRESHOLDS.tmaAman, THRESHOLDS.tmaKritis);
+    }
+
+    // Kenaikan mendadak kelembaban tanah/udara dibanding pembacaan hari
+    // sebelumnya diasumsikan sebagai indikasi hujan, lalu diskalakan jadi
+    // perkiraan mm. Ganti fungsi ini kapan pun Anda punya rain gauge asli.
+    function estimateRainMm(tanahNow, udaraNow, prevEntry) {
+        if (!prevEntry) return 0;
+        const deltaTanah = tanahNow - prevEntry.tanah;
+        const deltaUdara = udaraNow - prevEntry.udara;
+        const raw = Math.max(deltaTanah, 0) * 0.6 + Math.max(deltaUdara, 0) * 0.25;
+        return Math.round(clamp(raw, 0, 50) * 100) / 100;
+    }
+
+    // Mencatat SATU entri per hari kalender (menimpa entri hari ini jika ESP32
+    // mengirim beberapa kali sehari), maksimal 30 hari terakhir disimpan di
+    // localStorage. Ini yang menjadi sumber histori untuk kartu-kartu hujan.
+    function logDailyReading(kelembabanTanah, kelembabanUdara) {
+        const storeKey = "riwayat_harian_sensor";
+        let arr = JSON.parse(localStorage.getItem(storeKey) || "[]");
+        const today = todayKey();
+        const last = arr[arr.length - 1];
+
+        if (last && last.date === today) {
+            const prevDay = arr.length >= 2 ? arr[arr.length - 2] : null;
+            last.tanah = kelembabanTanah;
+            last.udara = kelembabanUdara;
+            last.hujanEstimasi = estimateRainMm(kelembabanTanah, kelembabanUdara, prevDay);
+        } else {
+            const hujanEstimasi = estimateRainMm(kelembabanTanah, kelembabanUdara, last || null);
+            arr.push({ date: today, tanah: kelembabanTanah, udara: kelembabanUdara, hujanEstimasi });
+        }
+
+        if (arr.length > 30) arr = arr.slice(arr.length - 30);
+        localStorage.setItem(storeKey, JSON.stringify(arr));
+        return arr;
+    }
+
+    /* =====================================================================
+       4) RENDER DASHBOARD DARI DATA FIREBASE
+       ===================================================================== */
+    function updateDashboard(data) {
+        if (!data) return;
+
+        const suhu = Number(data.suhu ?? 0);
+        const kelembabanUdara = Number(data.kelembaban_udara ?? 0);
+        const kelembaban = Number(data.kelembaban_tanah ?? 0);
+
+        // --- Catat histori harian (untuk kartu-kartu hujan) ---
+        const histArr = logDailyReading(kelembaban, kelembabanUdara);
+        const hujanEstList = histArr.map(h => h.hujanEstimasi);
+
+        // --- Tinggi Muka Air ---
+        // PAKAI DATA ASLI JIKA ADA (kalau ESP32 sudah kirim field "tma"),
+        // kalau belum ada, pakai estimasi dari kelembaban tanah.
+        const tma = data.tma !== undefined ? Number(data.tma) : estimateTMA(kelembaban);
+        if ($("tma-value")) $("tma-value").textContent = tma.toFixed(2);
+        const tmaHist = pushHistory("tma", tma);
+        updateMiniBars("tma-bars", tmaHist);
+        updateTrend("tma-trend-text", "tma-trend-icon", "tma-trend", tmaHist);
+
+        // --- Kelembaban Tanah (data sensor asli) ---
+        if ($("kelembaban-value")) $("kelembaban-value").textContent = kelembaban.toFixed(2);
+        const kelHist = pushHistory("kelembaban", kelembaban);
+        updateMiniBars("kelembaban-bars", kelHist);
+        updateTrend("kelembaban-trend-text", "kelembaban-trend-icon", "kelembaban-trend", kelHist);
+
+        // --- Curah Hujan 7 Hari ---
+        // PAKAI DATA ASLI JIKA ADA (data.curah_hujan.harian_mm dari rain gauge),
+        // kalau belum ada, pakai hasil estimasi dari tren kelembaban.
+        const hujanAsli = data.curah_hujan || {};
+        const harian7 = Array.isArray(hujanAsli.harian_mm)
+            ? hujanAsli.harian_mm.map(Number)
+            : hujanEstList.slice(-7);
+        while (harian7.length < 7) harian7.unshift(0);
+        const total7 = harian7.reduce((a, b) => a + b, 0);
+        if ($("hujan7-value")) $("hujan7-value").textContent = total7.toFixed(2);
+        const p7 = buildAreaLinePath(harian7);
+        if ($("hujan7-area")) $("hujan7-area").setAttribute("d", p7.area);
+        if ($("hujan7-line")) $("hujan7-line").setAttribute("d", p7.line);
+
+        // --- Curah Hujan 1 Bulan (30 hari terakhir, diringkas jadi 12 titik) ---
+        const harian30 = Array.isArray(hujanAsli.bulanan_mm)
+            ? hujanAsli.bulanan_mm.map(Number)
+            : hujanEstList.slice(-30);
+        const totalBulanIni = Array.isArray(hujanAsli.bulanan_mm)
+            ? (harian30[harian30.length - 1] ?? 0)
+            : harian30.reduce((a, b) => a + b, 0);
+        if ($("hujan30-value")) $("hujan30-value").textContent = totalBulanIni.toFixed(2);
+        const bulanan12 = Array.isArray(hujanAsli.bulanan_mm) ? harian30 : resampleTo(harian30, 12);
+        const p30 = buildAreaLinePath(bulanan12);
+        if ($("hujan30-area")) $("hujan30-area").setAttribute("d", p30.area);
+        if ($("hujan30-line")) $("hujan30-line").setAttribute("d", p30.line);
+
+        // --- Hari Tanpa Hujan (grid 15 sel + badge status) ---
+        const historyForGrid = Array.isArray(hujanAsli.riwayat_15hari)
+            ? hujanAsli.riwayat_15hari.map(Number)
+            : hujanEstList.slice(-15);
+        const grid15 = new Array(15).fill(0);
+        // isi dari kanan (hari terbaru di akhir), sisa sel di kiri dianggap "belum ada data" -> hujan (netral)
+        for (let i = 0; i < historyForGrid.length; i++) {
+            grid15[15 - historyForGrid.length + i] = historyForGrid[i];
+        }
+        const cells = document.querySelectorAll("#hth-grid [data-cell]");
+        cells.forEach((cell, i) => {
+            const v = grid15[i];
+            const kering = v <= 0.5; // ambang: di bawah ini dianggap "tidak hujan"
+            cell.classList.remove("bg-[#0062ff]", "bg-[#e54545]");
+            cell.classList.add(kering ? "bg-[#e54545]" : "bg-[#0062ff]");
+        });
+        // hitung deret hari kering berturut-turut dari data terbaru mundur
+        let dryStreak = 0;
+        for (let i = historyForGrid.length - 1; i >= 0; i--) {
+            if (historyForGrid[i] <= 0.5) dryStreak++; else break;
+        }
+        const status = dryStreak >= 7 ? "Tinggi" : dryStreak >= 3 ? "Sedang" : "Rendah";
+        const badgeColors = {
+            Tinggi: ["bg-[#fef2f2]", "text-[#ef4444]", "border-[#fecaca]"],
+            Sedang: ["bg-[#fff7ed]", "text-[#f97316]", "border-[#ffedd5]"],
+            Rendah: ["bg-[#f0fdf4]", "text-[#10b981]", "border-[#bbf7d0]"]
+        };
+        const badge = $("hth-status");
+        if (badge) {
+            badge.textContent = `Status : ${status}`;
+            badge.className = "text-[8px] px-2 py-0.5 rounded-full font-bold border " + badgeColors[status].join(" ");
+        }
+
+        // --- Perhitungan Skor Risiko (heuristik, silakan sesuaikan) ---
+        const tmaRisk = clamp(lerp(tma, THRESHOLDS.tmaAman, THRESHOLDS.tmaKritis, 0, 100), 0, 100);
+        const kelembabanRisk = clamp(100 - kelembaban, 0, 100);
+        const hujanRisk = clamp(100 - total7 * 3, 0, 100);
+        const hthRisk = clamp(dryStreak * 14, 0, 100);
+
+        const w = THRESHOLDS.weights;
+        const score = clamp(
+            tmaRisk * w.tma + kelembabanRisk * w.kelembaban + hujanRisk * w.hujan + hthRisk * w.hth,
+            0, 100
+        );
+
+        // Update arc + teks skor risiko
+        const dasharray = 188.5;
+        const dashoffset = (dasharray * (1 - score / 100)).toFixed(2);
+        if ($("risk-arc-fg")) $("risk-arc-fg").setAttribute("stroke-dashoffset", dashoffset);
+        if ($("risk-score-value")) $("risk-score-value").textContent = Math.round(score);
+
+        let level, levelColor, desc;
+        if (score >= 70) {
+            level = "Tinggi"; levelColor = "#e14242";
+            desc = "Kondisi lahan gambut berisiko tinggi terbakar. Segera lakukan langkah mitigasi.";
+        } else if (score >= 40) {
+            level = "Sedang"; levelColor = "#f97316";
+            desc = "Kondisi lahan gambut perlu dipantau lebih ketat karena risiko kebakaran mulai meningkat.";
+        } else {
+            level = "Rendah"; levelColor = "#10b981";
+            desc = "Kondisi lahan gambut relatif aman dari risiko kebakaran saat ini.";
+        }
+        const labelEl = $("risk-score-label");
+        if (labelEl) { labelEl.textContent = level; labelEl.style.color = levelColor; }
+        if ($("risk-score-desc")) $("risk-score-desc").textContent = desc;
+
+        // --- Analisis Faktor Risiko (4 bar) ---
+        if ($("factor-tma-bar")) $("factor-tma-bar").style.width = tmaRisk.toFixed(0) + "%";
+        if ($("factor-kelembaban-bar")) $("factor-kelembaban-bar").style.width = kelembabanRisk.toFixed(0) + "%";
+        if ($("factor-hujan-bar")) $("factor-hujan-bar").style.width = hujanRisk.toFixed(0) + "%";
+        if ($("factor-hth-bar")) $("factor-hth-bar").style.width = hthRisk.toFixed(0) + "%";
+
+        // --- Peta Sebaran: pakai data.hotspots dari Firebase kalau ada ---
+        if (Array.isArray(data.hotspots) && window.renderHotspots) {
+            window.renderHotspots(data.hotspots);
+        }
+
+        // --- Alert Box ---
+        const alertBox = $("alert-box");
+        const faktorUtamaKey = tmaRisk >= kelembabanRisk ? "tma" : "kelembaban";
+        if (alertBox) {
+            if (score >= 60) {
+                alertBox.style.display = "flex";
+                const faktorUtama = faktorUtamaKey === "tma" ? "tinggi muka air yang rendah" : "kelembaban tanah yang rendah";
+                if ($("alert-message")) {
+                    $("alert-message").textContent =
+                        `Risiko kebakaran ${level.toLowerCase()} akibat ${faktorUtama}` +
+                        (hujanRisk > 60 ? " dan curah hujan rendah" : "") +
+                        `. Prioritaskan penyekatan kanal & siapkan sumur bor cadangan.`;
+                }
+            } else {
+                alertBox.style.display = "none";
+            }
+        }
+
+        // --- Simpan state global + broadcast event, supaya halaman lain
+        //     (Indikator, Tren, Mitigasi, Sebaran Risiko) bisa ikut update ---
+        window.__peatApp = window.__peatApp || {};
+        window.__peatApp.lastData = data;
+        window.__peatApp.history = histArr;
+        window.__peatApp.lastComputed = {
+            tma, kelembaban, total7, totalBulanIni, dryStreak,
+            tmaRisk, kelembabanRisk, hujanRisk, hthRisk,
+            score, level, levelColor, faktorUtamaKey
+        };
+        document.dispatchEvent(new CustomEvent("peatapp:update"));
+    }
+
+    /* =====================================================================
+       5) STATE AWAL — SEMUA ANGKA & GRAFIK DI POSISI NOL / NETRAL
+          Ditampilkan begitu halaman dibuka, SEBELUM ada data dari Firebase.
+          Begitu snapshot pertama datang, updateDashboard() akan menimpa
+          semua nilai ini dengan data sensor asli.
+       ===================================================================== */
+    function resetDashboardToZero() {
+        // --- Angka utama ---
+        if ($("tma-value")) $("tma-value").textContent = "0.00";
+        if ($("kelembaban-value")) $("kelembaban-value").textContent = "0.00";
+        if ($("hujan7-value")) $("hujan7-value").textContent = "0.00";
+        if ($("hujan30-value")) $("hujan30-value").textContent = "0.00";
+
+        // --- Mini bar TMA & Kelembaban -> rata di posisi minimum ---
+        ["tma-bars", "kelembaban-bars"].forEach((id) => {
+            const c = $(id);
+            if (!c) return;
+            c.querySelectorAll(":scope > div").forEach((bar) => (bar.style.height = "8%"));
+        });
+
+        // --- Teks tren -> netral, belum ada perbandingan ---
+        ["tma", "kelembaban"].forEach((key) => {
+            const text = $(key + "-trend-text");
+            if (text) text.textContent = "Menunggu data...";
+            const wrap = $(key + "-trend");
+            if (wrap) { wrap.classList.remove("text-[#10b981]", "text-[#ef4444]"); wrap.classList.add("text-gray-300"); }
+            const icon = $(key + "-trend-icon");
+            if (icon) icon.style.transform = "rotate(0deg)";
+        });
+
+        // --- Grafik curah hujan 7 hari & 1 bulan -> garis datar kosong ---
+        const flat7 = buildAreaLinePath(new Array(7).fill(0));
+        if ($("hujan7-area")) $("hujan7-area").setAttribute("d", flat7.area);
+        if ($("hujan7-line")) $("hujan7-line").setAttribute("d", flat7.line);
+        const flat30 = buildAreaLinePath(new Array(12).fill(0));
+        if ($("hujan30-area")) $("hujan30-area").setAttribute("d", flat30.area);
+        if ($("hujan30-line")) $("hujan30-line").setAttribute("d", flat30.line);
+
+        // --- Grid Hari Tanpa Hujan -> abu-abu netral, belum diketahui kering/hujan ---
+        document.querySelectorAll("#hth-grid [data-cell]").forEach((cell) => {
+            cell.classList.remove("bg-[#0062ff]", "bg-[#e54545]");
+            cell.classList.add("bg-gray-200");
+        });
+        const badge = $("hth-status");
+        if (badge) {
+            badge.textContent = "Status : -";
+            badge.className = "text-[8px] bg-gray-100 text-gray-400 px-2 py-0.5 rounded-full font-bold border border-gray-200";
+        }
+
+        // --- Skor Risiko -> 0%, arc kosong ---
+        if ($("risk-arc-fg")) $("risk-arc-fg").setAttribute("stroke-dashoffset", "188.5");
+        if ($("risk-score-value")) $("risk-score-value").textContent = "0";
+        const labelEl = $("risk-score-label");
+        if (labelEl) { labelEl.textContent = "-"; labelEl.style.color = "#9ca3af"; }
+        if ($("risk-score-desc")) $("risk-score-desc").textContent = "Menunggu data dari sensor Firebase...";
+
+        // --- Analisis Faktor Risiko -> semua bar 0% ---
+        ["factor-tma-bar", "factor-kelembaban-bar", "factor-hujan-bar", "factor-hth-bar"].forEach((id) => {
+            if ($(id)) $(id).style.width = "0%";
+        });
+
+        // --- Alert Box -> disembunyikan sampai ada data ---
+        const alertBox = $("alert-box");
+        if (alertBox) alertBox.style.display = "none";
+    }
+
+    resetDashboardToZero();
+
+    /* =====================================================================
+       6) LISTENER REALTIME DARI FIREBASE
+       ===================================================================== */
+    db.ref(ROOT_PATH).on("value", (snapshot) => {
+        const data = snapshot.val();
+        if (!data) {
+            console.warn(`Tidak ada data di path "${ROOT_PATH}" pada Firebase Realtime Database.`);
+            return;
+        }
+        updateDashboard(data);
+    }, (error) => {
+        console.error("Gagal membaca data dari Firebase:", error);
+    });
+    </script>
+
+    <!-- ======================================================================
+         VIEW SWITCHER (Beranda <-> Asisten AI) + LOGIC CHAT UI (front-end only)
+         ====================================================================== -->
+    <script>
+    (function () {
+        const NAV_ACTIVE = "flex items-center gap-4 px-5 py-3 bg-white/20 rounded-full font-semibold transition shadow-sm";
+        const NAV_INACTIVE = "flex items-center gap-4 px-5 py-3 hover:bg-white/10 rounded-full font-medium transition text-white/80 hover:text-white";
+
+        const viewDashboard = document.getElementById("view-dashboard");
+        const viewAsistenAI = document.getElementById("view-asisten-ai");
+        const navBeranda = document.getElementById("nav-beranda");
+        const navAsistenAI = document.getElementById("nav-asisten-ai");
+
+        function switchView(view) {
+            const showAI = view === "asisten-ai";
+            if (viewDashboard) viewDashboard.style.display = showAI ? "none" : "block";
+            if (viewAsistenAI) viewAsistenAI.style.display = showAI ? "flex" : "none";
+            if (navBeranda) navBeranda.className = showAI ? NAV_INACTIVE : NAV_ACTIVE;
+            if (navAsistenAI) navAsistenAI.className = showAI ? NAV_ACTIVE : NAV_INACTIVE;
+        }
+
+        if (navBeranda) navBeranda.addEventListener("click", (e) => { e.preventDefault(); switchView("dashboard"); });
+        if (navAsistenAI) navAsistenAI.addEventListener("click", (e) => { e.preventDefault(); switchView("asisten-ai"); });
+
+        const btnTanyaAsisten = document.getElementById("btn-tanya-asisten");
+        if (btnTanyaAsisten) btnTanyaAsisten.addEventListener("click", () => switchView("asisten-ai"));
+
+        /* =================================================================
+           CHAT — front-end penuh, respons AI masih placeholder.
+           Ganti isi fungsi getAIResponse() di bawah untuk menyambungkan ke
+           API AI asli (Gemini/OpenAI/model lain) begitu siap.
+           ================================================================= */
+        const chatState = { messages: [] };
+        const chatGreeting = document.getElementById("chat-greeting");
+        const chatMessagesEl = document.getElementById("chat-messages");
+        const chatScrollEl = document.getElementById("chat-scroll");
+        const chatInput = document.getElementById("chat-input");
+        const chatSendBtn = document.getElementById("chat-send-btn");
+
+        function escapeHtml(str) {
+            const div = document.createElement("div");
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function bubbleHtml(msg) {
+            const isUser = msg.role === "user";
+            return (
+                `<div class="flex ${isUser ? "justify-end" : "justify-start"} mb-4">` +
+                `<div class="max-w-[75%] whitespace-pre-wrap ${isUser ? "bg-brand-blue text-white" : "bg-gray-100 text-gray-800"} rounded-2xl px-4 py-3 text-sm leading-relaxed">${escapeHtml(msg.text)}</div>` +
+                `</div>`
+            );
+        }
+
+        function renderMessages() {
+            if (!chatMessagesEl || !chatGreeting) return;
+            if (chatState.messages.length > 0) {
+                chatGreeting.classList.add("hidden");
+                chatMessagesEl.classList.remove("hidden");
+            }
+            chatMessagesEl.innerHTML = chatState.messages.map(bubbleHtml).join("");
+            if (chatScrollEl) chatScrollEl.scrollTop = chatScrollEl.scrollHeight;
+        }
+
+        function appendMessage(role, text) {
+            chatState.messages.push({ role, text });
+            renderMessages();
+            return chatState.messages.length - 1;
+        }
+
+        // TODO: GANTI fungsi ini untuk konek ke API AI asli (Gemini/OpenAI/dst).
+        // Sekarang cuma placeholder biar UI-nya sudah bisa dicoba end-to-end.
+        async function getAIResponse(userText) {
+            await new Promise((resolve) => setTimeout(resolve, 500)); // simulasi delay
+            return "Asisten AI belum terhubung ke model AI asli. Ganti fungsi getAIResponse() di script untuk menyambungkan API kamu.";
+        }
+
+        async function handleSend() {
+            if (!chatInput) return;
+            const text = chatInput.value.trim();
+            if (!text) return;
+            chatInput.value = "";
+            chatInput.style.height = "auto";
+            appendMessage("user", text);
+            const loadingIndex = appendMessage("assistant", "Mengetik...");
+            const reply = await getAIResponse(text);
+            chatState.messages[loadingIndex].text = reply;
+            renderMessages();
+        }
+
+        if (chatSendBtn) chatSendBtn.addEventListener("click", handleSend);
+        if (chatInput) {
+            chatInput.addEventListener("keydown", (e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                }
+            });
+            // auto-grow textarea sampai batas max-h-32 (lihat class di HTML)
+            chatInput.addEventListener("input", () => {
+                chatInput.style.height = "auto";
+                chatInput.style.height = chatInput.scrollHeight + "px";
+            });
+        }
+    })();
+    </script>
+
+    <!-- ======================================================================
+         EXTENSION SCRIPT — mengaktifkan 4 halaman baru: Indikator,
+         Sebaran Risiko, Tren, Mitigasi. TIDAK mengubah script/HTML yang
+         sudah ada di atas — hanya menambahkan logic baru dan memakai
+         fungsi/variabel global yang sudah didefinisikan sebelumnya
+         ($, THRESHOLDS, estimateTMA, buildAreaLinePath, updateDashboard,
+         window.__peatApp, window.__createFullPeatMap, window.renderHotspots).
+         ====================================================================== -->
+    <script>
+    (function () {
+        const navEls = Array.from(document.querySelectorAll("[data-view]"));
+        const VIEW_IDS = {
+            "dashboard": "view-dashboard",
+            "indikator": "view-indikator",
+            "sebaran-risiko": "view-sebaran-risiko",
+            "tren": "view-tren",
+            "mitigasi": "view-mitigasi",
+            "asisten-ai": "view-asisten-ai",
+        };
+        const NAV_ACTIVE = "flex items-center gap-4 px-5 py-3 bg-white/20 rounded-full font-semibold transition shadow-sm";
+        const NAV_INACTIVE = "flex items-center gap-4 px-5 py-3 hover:bg-white/10 rounded-full font-medium transition text-white/80 hover:text-white";
+
+        /* =================================================================
+           SWITCHER UTAMA — menangani SEMUA nav (Beranda, Indikator,
+           Sebaran Risiko, Tren, Asisten AI, Mitigasi), bukan cuma 2 seperti
+           script lama. Aman dipanggil bareng script view-switcher lama.
+           ================================================================= */
+        function showAppView(viewKey) {
+            Object.keys(VIEW_IDS).forEach((key) => {
+                const el = document.getElementById(VIEW_IDS[key]);
+                if (!el) return;
+                const active = key === viewKey;
+                el.style.display = active ? (key === "asisten-ai" ? "flex" : "block") : "none";
+            });
+            navEls.forEach((nav) => {
+                nav.className = nav.getAttribute("data-view") === viewKey ? NAV_ACTIVE : NAV_INACTIVE;
+            });
+
+            if (viewKey === "indikator") renderIndikatorPage();
+            if (viewKey === "sebaran-risiko") initSebaranRisikoPage();
+            if (viewKey === "tren") renderTrenPage();
+            if (viewKey === "mitigasi") renderMitigasiPage();
+
+            // perbaiki ukuran peta Leaflet setelah container-nya terlihat lagi
+            setTimeout(() => window.dispatchEvent(new Event("resize")), 80);
+        }
+
+        navEls.forEach((nav) => {
+            nav.addEventListener("click", (e) => {
+                e.preventDefault();
+                showAppView(nav.getAttribute("data-view"));
+            });
+        });
+
+        const btnTanyaAsisten = document.getElementById("btn-tanya-asisten");
+        if (btnTanyaAsisten) btnTanyaAsisten.addEventListener("click", () => showAppView("asisten-ai"));
+
+        // tombol "Lihat Mitigasi" di Alert Box dashboard -> loncat ke halaman Mitigasi
+        const alertMitigasiBtn = document.querySelector("#alert-box button");
+        if (alertMitigasiBtn) alertMitigasiBtn.addEventListener("click", () => showAppView("mitigasi"));
+
+        // muat kalibrasi tersimpan (kalau ada) sebelum halaman dipakai
+        try {
+            const saved = JSON.parse(localStorage.getItem("kalibrasi_thresholds") || "null");
+            if (saved && saved.weights && typeof THRESHOLDS !== "undefined") {
+                THRESHOLDS.tmaAman = saved.tmaAman;
+                THRESHOLDS.tmaKritis = saved.tmaKritis;
+                THRESHOLDS.weights = saved.weights;
+            }
+        } catch (e) {}
+
+        /* =================================================================
+           1) INDIKATOR — pembacaan sensor terkini + kalibrasi ambang batas
+           ================================================================= */
+        function renderIndikatorPage() {
+            const lastData = window.__peatApp && window.__peatApp.lastData;
+            const suhuEl = document.getElementById("indikator-suhu");
+            const udaraEl = document.getElementById("indikator-udara");
+            const tanahEl = document.getElementById("indikator-tanah");
+            const statusEl = document.getElementById("indikator-status");
+            if (lastData) {
+                if (suhuEl) suhuEl.textContent = Number(lastData.suhu ?? 0).toFixed(1);
+                if (udaraEl) udaraEl.textContent = Number(lastData.kelembaban_udara ?? 0).toFixed(1);
+                if (tanahEl) tanahEl.textContent = Number(lastData.kelembaban_tanah ?? 0).toFixed(1);
+                if (statusEl) statusEl.textContent = "Data terakhir diterima pukul " + new Date().toLocaleTimeString("id-ID") + " dari Firebase.";
+            } else if (statusEl) {
+                statusEl.textContent = "Menunggu data dari Firebase...";
+            }
+            syncKalibrasiInputs();
+        }
+
+        function gv(id, fallback) {
+            const el = document.getElementById(id);
+            return el && el.value !== "" ? el.value : fallback;
+        }
+        function setText(id, text) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = text;
+        }
+
+        function syncKalibrasiInputs() {
+            if (typeof THRESHOLDS === "undefined") return;
+            const map = {
+                "input-tma-aman": THRESHOLDS.tmaAman,
+                "input-tma-kritis": THRESHOLDS.tmaKritis,
+                "input-w-tma": THRESHOLDS.weights.tma,
+                "input-w-kelembaban": THRESHOLDS.weights.kelembaban,
+                "input-w-hujan": THRESHOLDS.weights.hujan,
+                "input-w-hth": THRESHOLDS.weights.hth,
+            };
+            Object.keys(map).forEach((id) => {
+                const el = document.getElementById(id);
+                // jangan timpa input yang lagi diketik/diubah user
+                if (el && document.activeElement !== el && !el.dataset.userTouched) el.value = map[id];
+            });
+            updateWeightLabels();
+        }
+
+        function updateWeightLabels() {
+            const w = {
+                tma: Number(gv("input-w-tma", THRESHOLDS.weights.tma)),
+                kelembaban: Number(gv("input-w-kelembaban", THRESHOLDS.weights.kelembaban)),
+                hujan: Number(gv("input-w-hujan", THRESHOLDS.weights.hujan)),
+                hth: Number(gv("input-w-hth", THRESHOLDS.weights.hth)),
+            };
+            setText("label-w-tma", Math.round(w.tma * 100) + "%");
+            setText("label-w-kelembaban", Math.round(w.kelembaban * 100) + "%");
+            setText("label-w-hujan", Math.round(w.hujan * 100) + "%");
+            setText("label-w-hth", Math.round(w.hth * 100) + "%");
+            const totalPct = Math.round((w.tma + w.kelembaban + w.hujan + w.hth) * 100);
+            const totalEl = document.getElementById("indikator-bobot-total");
+            if (totalEl) {
+                totalEl.textContent = "(total " + totalPct + "%)";
+                totalEl.classList.toggle("text-red-500", totalPct !== 100);
+                totalEl.classList.toggle("text-gray-400", totalPct === 100);
+            }
+            return w;
+        }
+
+        ["input-w-tma", "input-w-kelembaban", "input-w-hujan", "input-w-hth", "input-tma-aman", "input-tma-kritis"].forEach((id) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.addEventListener("input", () => {
+                el.dataset.userTouched = "1";
+                updateWeightLabels();
+            });
+        });
+
+        const btnSimpanKalibrasi = document.getElementById("btn-simpan-kalibrasi");
+        if (btnSimpanKalibrasi) {
+            btnSimpanKalibrasi.addEventListener("click", () => {
+                const tmaAman = Number(gv("input-tma-aman", THRESHOLDS.tmaAman));
+                const tmaKritis = Number(gv("input-tma-kritis", THRESHOLDS.tmaKritis));
+                const w = updateWeightLabels();
+                const total = w.tma + w.kelembaban + w.hujan + w.hth;
+
+                if (!(tmaKritis > tmaAman)) {
+                    showKalibrasiMsg("TMA Kritis harus lebih besar dari TMA Aman.", true);
+                    return;
+                }
+                if (Math.abs(total - 1) > 0.005) {
+                    showKalibrasiMsg("Total bobot harus 100% (saat ini " + Math.round(total * 100) + "%).", true);
+                    return;
+                }
+
+                THRESHOLDS.tmaAman = tmaAman;
+                THRESHOLDS.tmaKritis = tmaKritis;
+                THRESHOLDS.weights = w;
+                try { localStorage.setItem("kalibrasi_thresholds", JSON.stringify(THRESHOLDS)); } catch (e) {}
+
+                ["input-w-tma", "input-w-kelembaban", "input-w-hujan", "input-w-hth", "input-tma-aman", "input-tma-kritis"].forEach((id) => {
+                    const el = document.getElementById(id);
+                    if (el) delete el.dataset.userTouched;
+                });
+
+                if (window.__peatApp && window.__peatApp.lastData && typeof updateDashboard === "function") {
+                    updateDashboard(window.__peatApp.lastData);
+                }
+                showKalibrasiMsg("Tersimpan! Skor risiko sudah dihitung ulang.", false);
+            });
+        }
+
+        function showKalibrasiMsg(text, isError) {
+            const el = document.getElementById("indikator-saved-msg");
+            if (!el) return;
+            el.textContent = text;
+            el.classList.toggle("text-[#ef4444]", isError);
+            el.classList.toggle("text-[#10b981]", !isError);
+            clearTimeout(showKalibrasiMsg._t);
+            showKalibrasiMsg._t = setTimeout(() => { el.textContent = ""; }, 4000);
+        }
+
+        /* =================================================================
+           2) SEBARAN RISIKO — peta full + daftar titik panas
+           ================================================================= */
+        let fullMapInstance = null;
+        function initSebaranRisikoPage() {
+            if (fullMapInstance) return;
+            if (typeof window.__createFullPeatMap !== "function" || !document.getElementById("peta-sebaran-map-full")) return;
+            fullMapInstance = window.__createFullPeatMap("peta-sebaran-map-full", { zoom: 9, list: renderHotspotListUI });
+            const lastHotspots = window.__peatApp && window.__peatApp.lastData && Array.isArray(window.__peatApp.lastData.hotspots)
+                ? window.__peatApp.lastData.hotspots
+                : null;
+            if (lastHotspots) fullMapInstance.renderHotspots(lastHotspots);
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement("div");
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function renderHotspotListUI(points) {
+            const wrap = document.getElementById("hotspot-list");
+            if (!wrap) return;
+            if (!points || points.length === 0) {
+                wrap.innerHTML = '<p class="text-xs text-gray-400 text-center py-6">Belum ada titik panas terdeteksi.</p>';
+                return;
+            }
+            wrap.innerHTML = points.map((p, i) => {
+                const name = escapeHtml(p.name || ("Titik Panas " + (i + 1)));
+                return (
+                    '<button data-hotspot-index="' + i + '" class="w-full flex items-center gap-3 p-3 bg-gray-50 hover:bg-red-50 rounded-2xl border border-gray-100 hover:border-red-200 transition text-left group">' +
+                    '<div class="w-8 h-8 rounded-full bg-red-100 group-hover:bg-red-500 flex items-center justify-center shrink-0 transition">' +
+                    '<svg class="w-4 h-4 text-red-500 group-hover:text-white transition" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>' +
+                    "</div>" +
+                    '<div class="min-w-0">' +
+                    '<p class="text-[13px] font-semibold text-gray-800 truncate">' + name + "</p>" +
+                    '<p class="text-[10px] text-gray-400">' + p.lat.toFixed(4) + ", " + p.lng.toFixed(4) + "</p>" +
+                    "</div></button>"
+                );
+            }).join("");
+
+            wrap.querySelectorAll("[data-hotspot-index]").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    if (!fullMapInstance) return;
+                    const idx = Number(btn.getAttribute("data-hotspot-index"));
+                    const marker = fullMapInstance.markerByIndex[idx];
+                    if (!marker) return;
+                    fullMapInstance.map.flyTo(marker.getLatLng(), 12, { duration: 0.8 });
+                    marker.openPopup();
+                });
+            });
+        }
+
+        /* =================================================================
+           3) TREN — grafik historis dari localStorage "riwayat_harian_sensor"
+           ================================================================= */
+        function renderTrenPage() {
+            let hist = [];
+            try { hist = JSON.parse(localStorage.getItem("riwayat_harian_sensor") || "[]"); } catch (e) {}
+            const empty = document.getElementById("tren-empty");
+            const charts = document.getElementById("tren-charts");
+            if (!hist || hist.length < 2 || typeof buildAreaLinePath !== "function") {
+                if (empty) empty.classList.remove("hidden");
+                if (charts) charts.classList.add("hidden");
+                return;
+            }
+            if (empty) empty.classList.add("hidden");
+            if (charts) charts.classList.remove("hidden");
+
+            const tmaSeries = hist.map((h) => (typeof estimateTMA === "function" ? estimateTMA(Number(h.tanah || 0)) : Number(h.tanah || 0)));
+            const kelSeries = hist.map((h) => Number(h.tanah || 0));
+            const hujanSeries = hist.map((h) => Number(h.hujanEstimasi || 0));
+
+            applyPath("tren-tma-area", "tren-tma-line", buildAreaLinePath(tmaSeries));
+            applyPath("tren-kelembaban-area", "tren-kelembaban-line", buildAreaLinePath(kelSeries));
+            applyPath("tren-hujan-area", "tren-hujan-line", buildAreaLinePath(hujanSeries));
+        }
+
+        function applyPath(areaId, lineId, path) {
+            const a = document.getElementById(areaId);
+            const l = document.getElementById(lineId);
+            if (a) a.setAttribute("d", path.area);
+            if (l) l.setAttribute("d", path.line);
+        }
+
+        /* =================================================================
+           4) MITIGASI — banner status + checklist tindakan (tersimpan lokal)
+           ================================================================= */
+        const MITIGASI_ITEMS = [
+            { id: "sekat-kanal", title: "Penyekatan kanal gambut", desc: "Pasang / rawat sekat kanal agar muka air tetap tinggi di sekitar titik rawan." },
+            { id: "sumur-bor", title: "Siapkan sumur bor cadangan", desc: "Pastikan sumur bor & pompa air siap dipakai untuk pembasahan darurat." },
+            { id: "patroli", title: "Patroli rutin area rawan", desc: "Jadwalkan patroli harian di titik dengan riwayat kering berkepanjangan." },
+            { id: "larangan-bakar", title: "Sosialisasi larangan membuka lahan dengan bakar", desc: "Ingatkan warga sekitar untuk tidak membuka lahan dengan cara dibakar." },
+            { id: "peralatan-siaga", title: "Siagakan peralatan pemadam", desc: "Cek pompa portable, selang, dan APAR di posko terdekat titik rawan." },
+            { id: "koordinasi-bpbd", title: "Koordinasi dengan BPBD / Manggala Agni", desc: "Laporkan status skor risiko terkini bila level Sedang atau Tinggi." },
+            { id: "monitoring-tma", title: "Pantau TMA lebih sering", desc: "Naikkan frekuensi pembacaan sensor saat status hari kering meningkat." },
+            { id: "early-warning", title: "Aktifkan sistem peringatan dini", desc: "Nyalakan notifikasi otomatis ke tim lapangan saat skor melewati ambang tinggi." },
+        ];
+
+        function renderMitigasiPage() {
+            renderMitigasiChecklist();
+            renderMitigasiBanner();
+        }
+
+        function renderMitigasiChecklist() {
+            const wrap = document.getElementById("mitigasi-checklist");
+            if (!wrap) return;
+            if (wrap.dataset.rendered === "1") { syncMitigasiProgress(); return; }
+            let state = {};
+            try { state = JSON.parse(localStorage.getItem("mitigasi_checklist_state") || "{}"); } catch (e) {}
+
+            wrap.innerHTML =
+                '<div id="mitigasi-progress" class="text-[11px] font-semibold text-gray-400 mb-2"></div>' +
+                MITIGASI_ITEMS.map((item) =>
+                    '<label class="flex items-start gap-3 p-3 rounded-2xl hover:bg-gray-50 transition cursor-pointer border border-gray-100">' +
+                    '<input type="checkbox" data-mitigasi-id="' + item.id + '" class="mt-1 w-4 h-4 accent-brand-blue shrink-0"' + (state[item.id] ? " checked" : "") + " />" +
+                    '<span><span class="block text-[13px] font-semibold text-gray-800">' + item.title + "</span>" +
+                    '<span class="block text-[11px] text-gray-400 mt-0.5 leading-relaxed">' + item.desc + "</span></span>" +
+                    "</label>"
+                ).join("");
+
+            wrap.querySelectorAll("[data-mitigasi-id]").forEach((cb) => {
+                cb.addEventListener("change", () => {
+                    let s = {};
+                    try { s = JSON.parse(localStorage.getItem("mitigasi_checklist_state") || "{}"); } catch (e) {}
+                    s[cb.getAttribute("data-mitigasi-id")] = cb.checked;
+                    try { localStorage.setItem("mitigasi_checklist_state", JSON.stringify(s)); } catch (e) {}
+                    syncMitigasiProgress();
+                });
+            });
+
+            wrap.dataset.rendered = "1";
+            syncMitigasiProgress();
+        }
+
+        function syncMitigasiProgress() {
+            const wrap = document.getElementById("mitigasi-checklist");
+            if (!wrap) return;
+            const boxes = wrap.querySelectorAll("[data-mitigasi-id]");
+            const done = Array.prototype.filter.call(boxes, (b) => b.checked).length;
+            const progressEl = document.getElementById("mitigasi-progress");
+            if (progressEl) progressEl.textContent = done + " dari " + boxes.length + " langkah selesai";
+        }
+
+        function renderMitigasiBanner() {
+            const computed = window.__peatApp && window.__peatApp.lastComputed;
+            const banner = document.getElementById("mitigasi-banner");
+            if (!banner || !computed) return;
+            const bg = { Tinggi: "#ef4444", Sedang: "#f97316", Rendah: "#10b981" }[computed.level] || "#9ca3af";
+            banner.style.background = bg;
+            const titleEl = document.getElementById("mitigasi-banner-title");
+            if (titleEl) titleEl.textContent = "Skor Risiko " + computed.level + " (" + Math.round(computed.score) + "%)";
+            const descEl = document.getElementById("mitigasi-banner-desc");
+            if (descEl) {
+                if (computed.level === "Rendah") {
+                    descEl.textContent = "Kondisi relatif aman — tetap jalankan patroli & perawatan sekat kanal secara rutin.";
+                } else {
+                    const faktor = computed.faktorUtamaKey === "tma" ? "tinggi muka air yang rendah" : "kelembaban tanah yang rendah";
+                    descEl.textContent = "Risiko dipicu oleh " + faktor + (computed.hujanRisk > 60 ? " dan curah hujan rendah" : "") + ". Prioritaskan langkah pada checklist di bawah.";
+                }
+            }
+        }
+
+        /* =================================================================
+           5) REFRESH OTOMATIS setiap kali dashboard.js memancarkan event
+              "peatapp:update" (dipanggil dari updateDashboard() yang sudah
+              ada) — supaya Indikator, Tren & banner Mitigasi selalu sinkron
+              walau user sedang tidak membuka halaman itu.
+           ================================================================= */
+        document.addEventListener("peatapp:update", () => {
+            renderIndikatorPage();
+            renderMitigasiBanner();
+            renderTrenPage();
+        });
+
+        // isi awal form kalibrasi begitu halaman dimuat
+        syncKalibrasiInputs();
+    })();
+    </script>
+
+    <!-- ======================================================================
+         DEMO DATA SIMULATOR — mengisi 4 halaman baru (Indikator, Sebaran
+         Risiko, Tren, Mitigasi) dengan data contoh yang BERVARIASI selama
+         belum ada koneksi Firebase asli. Script ini murni TAMBAHAN — tidak
+         menyentuh satu baris pun kode di atas. Ia menunggu sebentar untuk
+         cek apakah data asli dari Firebase sudah masuk (window.__peatApp
+         .lastData); kalau BELUM, ia mengisi seluruh dashboard + 4 halaman
+         baru dengan data dummy acak lewat fungsi updateDashboard() yang
+         sudah ada, supaya semua graph langsung terlihat "hidup". Kalau
+         Firebase asli sudah terhubung dan mengirim data, simulator ini
+         otomatis tidak melakukan apa-apa (data asli tidak akan ditimpa).
+         ====================================================================== -->
+    <script>
+    (function () {
+        function rand(min, max) { return Math.random() * (max - min) + min; }
+        function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+        function r2(n) { return Math.round(n * 100) / 100; }
+
+        // Bangun riwayat harian dummy (N hari terakhir, termasuk hari ini)
+        // dengan pola naik-turun yang natural, supaya grafik Tren punya
+        // bentuk yang bervariasi, bukan garis lurus.
+        function buildDummyHistory(days) {
+            const arr = [];
+            const today = new Date();
+            let tanah = rand(35, 65);
+            let udara = rand(55, 80);
+            for (let i = days - 1; i >= 0; i--) {
+                const d = new Date(today);
+                d.setDate(d.getDate() - i);
+                tanah = Math.max(10, Math.min(95, tanah + rand(-9, 9)));
+                udara = Math.max(30, Math.min(95, udara + rand(-7, 7)));
+                const hujanEstimasi = Math.max(0, r2(rand(-3, 13)));
+                arr.push({
+                    date: d.toISOString().slice(0, 10),
+                    tanah: r2(tanah),
+                    udara: r2(udara),
+                    hujanEstimasi: hujanEstimasi
+                });
+            }
+            return arr;
+        }
+
+        function seedIfEmpty(key, builder) {
+            try {
+                const existing = JSON.parse(localStorage.getItem(key) || "null");
+                if (existing && existing.length) return;
+            } catch (e) {}
+            localStorage.setItem(key, JSON.stringify(builder()));
+        }
+
+        // Payload dummy dengan bentuk yang PERSIS SAMA dengan yang dikirim
+        // ESP32 asli lewat Firebase (lihat komentar ROOT_PATH di script
+        // utama), supaya updateDashboard() bisa langsung memakainya tanpa
+        // perubahan apa pun.
+        function buildDummyPayload() {
+            const cities = [
+                { base: "Pekanbaru",   lat: -0.5071, lng: 101.4478 },
+                { base: "Payakumbuh",  lat: -0.2297, lng: 100.6304 },
+                { base: "Bukittinggi", lat: -0.3055, lng: 100.3692 },
+            ];
+            const hotspotCount = Math.floor(rand(5, 9));
+            const hotspots = [];
+            for (let i = 0; i < hotspotCount; i++) {
+                const c = pick(cities);
+                hotspots.push({
+                    name: "Titik Panas " + (i + 1) + " \u2014 dekat " + c.base,
+                    lat: c.lat + rand(-0.35, 0.35),
+                    lng: c.lng + rand(-0.35, 0.35),
+                });
+            }
+
+            return {
+                suhu: r2(rand(27, 35)),
+                kelembaban_udara: r2(rand(50, 88)),
+                kelembaban_tanah: r2(rand(25, 88)),
+                curah_hujan: {
+                    harian_mm: Array.from({ length: 7 }, () => r2(rand(0, 22))),
+                    bulanan_mm: Array.from({ length: 12 }, () => r2(rand(0, 18))),
+                    riwayat_15hari: Array.from({ length: 15 }, () => (Math.random() < 0.4 ? 0 : r2(rand(0.6, 15)))),
+                },
+                hotspots: hotspots,
+            };
+        }
+
+        function runDemoSimulation() {
+            if (typeof updateDashboard !== "function") return;
+            seedIfEmpty("riwayat_harian_sensor", () => buildDummyHistory(20));
+            seedIfEmpty("riwayat_tma", () => Array.from({ length: 4 }, () => r2(rand(30, 90))));
+            seedIfEmpty("riwayat_kelembaban", () => Array.from({ length: 4 }, () => r2(rand(25, 85))));
+            updateDashboard(buildDummyPayload());
+        }
+
+        // Beri waktu ke Firebase asli untuk mengirim data lebih dulu.
+        // Kalau sampai batas waktu ini belum ada data asli, baru dummy dipakai.
+        setTimeout(function () {
+            const hasRealData = window.__peatApp && window.__peatApp.lastData;
+            if (!hasRealData) runDemoSimulation();
+        }, 1800);
+    })();
+    </script>
+
+    <!-- ======================================================================
+         TOGGLE TEMA TERANG / GELAP — script tambahan murni. Menyimpan
+         pilihan pengguna di localStorage ("app_theme") supaya tetap
+         konsisten walau halaman dibuka ulang. Bekerja dengan cara
+         menambah/menghapus class "theme-dark" di <body>, yang dibaca oleh
+         blok <style> tambahan di <head>.
+         ====================================================================== -->
+    <script>
+    (function () {
+        const STORAGE_KEY = "app_theme"; // "light" | "dark"
+        const btn = document.getElementById("theme-toggle-btn");
+
+        function applyTheme(theme) {
+            document.body.classList.toggle("theme-dark", theme === "dark");
+            if (btn) btn.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
+        }
+
+        let saved = "light";
+        try { saved = localStorage.getItem(STORAGE_KEY) || "light"; } catch (e) {}
+        applyTheme(saved);
+
+        if (btn) {
+            btn.addEventListener("click", function () {
+                const next = document.body.classList.contains("theme-dark") ? "light" : "dark";
+                applyTheme(next);
+                try { localStorage.setItem(STORAGE_KEY, next); } catch (e) {}
+                // beri waktu 1 frame untuk repaint peta Leaflet setelah warna berubah
+                setTimeout(function () { window.dispatchEvent(new Event("resize")); }, 50);
+            });
+        }
+    })();
+    </script>
+</body>
+</html>
