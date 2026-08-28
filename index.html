@@ -83,6 +83,21 @@
         /* Peta & elemen berbasis SVG/leaflet biarkan apa adanya supaya data tetap terbaca jelas */
         body.theme-dark .leaflet-container { filter: brightness(0.92) contrast(1.05); }
 
+        /* Serial Monitor (Indikator) */
+        #serial-monitor-log { color: #c9d1d9; }
+        #serial-monitor-log::-webkit-scrollbar-thumb { background-color: #30363d; }
+        #serial-monitor-log .sm-line { white-space: pre-wrap; word-break: break-word; margin-bottom: 3px; }
+        #serial-monitor-log .sm-ts { color: #6e7681; }
+        #serial-monitor-log .sm-cyan { color: #56d4dd; font-weight: 600; }
+        #serial-monitor-log .sm-blue { color: #58a6ff; font-weight: 600; }
+        #serial-monitor-log .sm-green { color: #3fb950; font-weight: 600; }
+        #serial-monitor-log .sm-orange { color: #d29922; font-weight: 600; }
+        #serial-monitor-log .sm-white { color: #e6edf3; }
+        #serial-monitor-log .sm-cursor { display: inline-block; width: 7px; height: 13px; background: #56d4dd; margin-left: 2px; vertical-align: -2px; animation: sm-blink 1s steps(1) infinite; }
+        @keyframes sm-blink { 50% { opacity: 0; } }
+        #serial-monitor-status.is-live { color: #3fb950 !important; }
+        #serial-monitor-status.is-demo { color: #d29922 !important; }
+
         /* Tombol toggle tema */
         #theme-toggle-btn {
             position: fixed;
@@ -111,6 +126,36 @@
         #theme-toggle-btn .icon-moon { display: block; color: #0062ff; }
         body.theme-dark #theme-toggle-btn .icon-sun { display: block; }
         body.theme-dark #theme-toggle-btn .icon-moon { display: none; }
+
+        /* Badge status koneksi Firebase */
+        #firebase-status-badge {
+            position: fixed;
+            top: 20px;
+            right: 76px;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: 9999px;
+            background: #ffffff;
+            border: 1px solid #f0f0f0;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+            font-size: 11px;
+            font-weight: 700;
+            color: #9ca3af;
+            transition: background 0.2s ease;
+        }
+        #firebase-status-badge .status-dot {
+            width: 8px; height: 8px; border-radius: 9999px;
+            background: #d1d5db;
+            transition: background 0.2s ease;
+        }
+        #firebase-status-badge.is-live { color: #10b981; }
+        #firebase-status-badge.is-live .status-dot { background: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.18); }
+        #firebase-status-badge.is-demo { color: #f97316; }
+        #firebase-status-badge.is-demo .status-dot { background: #f97316; box-shadow: 0 0 0 3px rgba(249,115,22,0.18); }
+        body.theme-dark #firebase-status-badge { background: #1a1d24; border-color: #2d313b; }
     </style>
 </head>
 <body class="bg-brand-bg font-sans text-gray-800 h-screen w-full flex overflow-hidden selection:bg-brand-red selection:text-white">
@@ -120,6 +165,12 @@
         <svg class="icon-moon w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
         <svg class="icon-sun w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
     </button>
+
+    <!-- Badge status koneksi Firebase (murni tambahan) -->
+    <div id="firebase-status-badge" title="Status koneksi Firebase Realtime Database">
+        <span class="status-dot"></span>
+        <span id="firebase-status-text">Menghubungkan...</span>
+    </div>
 
     <!-- Sidebar -->
     <aside class="w-[260px] bg-brand-red text-white flex flex-col h-full shrink-0 relative z-20 shadow-2xl rounded-r-3xl">
@@ -547,6 +598,22 @@
                       <p id="indikator-saved-msg" class="text-[11px] text-[#10b981] font-semibold text-center h-4"></p>
                   </div>
               </div>
+          </div>
+
+          <!-- ============ Serial Monitor (murni tambahan) ============ -->
+          <div class="mt-6 bg-[#0d1117] rounded-[24px] shadow-sm border border-gray-800 overflow-hidden">
+              <div class="flex items-center justify-between px-5 py-3.5 border-b border-white/5">
+                  <div class="flex items-center gap-3">
+                      <div class="flex items-center gap-1.5">
+                          <span class="w-3 h-3 rounded-full bg-[#ff5f56]"></span>
+                          <span class="w-3 h-3 rounded-full bg-[#ffbd2e]"></span>
+                          <span class="w-3 h-3 rounded-full bg-[#27c93f]"></span>
+                      </div>
+                      <span class="text-[12px] font-semibold text-gray-400 font-mono">serial-monitor <span class="text-gray-600">·</span> gateway.sigap.local</span>
+                  </div>
+                  <span id="serial-monitor-status" class="text-[10px] font-bold tracking-wider text-gray-500 font-mono">IDLE</span>
+              </div>
+              <div id="serial-monitor-log" class="px-5 py-4 h-[220px] overflow-y-auto font-mono text-[12px] leading-relaxed"></div>
           </div>
       </div>
 
@@ -1246,6 +1313,51 @@
     </script>
 
     <!-- ======================================================================
+         BADGE STATUS KONEKSI FIREBASE — script tambahan murni, memakai
+         object global "db" yang sudah dibuat di atas. Memantau path khusus
+         Firebase Realtime Database ".info/connected" (fitur bawaan Firebase
+         untuk tahu status koneksi client secara real-time) supaya user bisa
+         lihat langsung apakah dashboard betul-betul menerima data live dari
+         Firebase, atau masih memakai data contoh (demo/dummy).
+         ====================================================================== -->
+    <script>
+    (function () {
+        const badge = document.getElementById("firebase-status-badge");
+        const textEl = document.getElementById("firebase-status-text");
+        if (!badge || !textEl) return;
+
+        window.__firebaseLiveConnected = false;
+
+        function setBadge(mode, text) {
+            badge.classList.remove("is-live", "is-demo");
+            if (mode) badge.classList.add(mode);
+            textEl.textContent = text;
+        }
+
+        try {
+            db.ref(".info/connected").on("value", (snap) => {
+                const connected = snap.val() === true;
+                window.__firebaseLiveConnected = connected;
+                if (connected) {
+                    setBadge("is-live", "Live dari Firebase");
+                } else {
+                    setBadge(window.__peatDemoActive ? "is-demo" : null,
+                        window.__peatDemoActive ? "Mode data contoh" : "Menghubungkan...");
+                }
+            });
+        } catch (e) {
+            setBadge(null, "Firebase belum dikonfigurasi");
+        }
+
+        // Diberitahu langsung oleh simulator dummy begitu ia mulai jalan,
+        // supaya badge tidak menunggu event ".info/connected" berikutnya.
+        document.addEventListener("peatapp:demoStarted", function () {
+            if (!window.__firebaseLiveConnected) setBadge("is-demo", "Mode data contoh");
+        });
+    })();
+    </script>
+
+    <!-- ======================================================================
          VIEW SWITCHER (Beranda <-> Asisten AI) + LOGIC CHAT UI (front-end only)
          ====================================================================== -->
     <script>
@@ -1810,18 +1922,33 @@
 
         function runDemoSimulation() {
             if (typeof updateDashboard !== "function") return;
+            window.__peatDemoActive = true;
+            document.dispatchEvent(new CustomEvent("peatapp:demoStarted"));
             seedIfEmpty("riwayat_harian_sensor", () => buildDummyHistory(20));
             seedIfEmpty("riwayat_tma", () => Array.from({ length: 4 }, () => r2(rand(30, 90))));
             seedIfEmpty("riwayat_kelembaban", () => Array.from({ length: 4 }, () => r2(rand(25, 85))));
             updateDashboard(buildDummyPayload());
         }
 
-        // Beri waktu ke Firebase asli untuk mengirim data lebih dulu.
-        // Kalau sampai batas waktu ini belum ada data asli, baru dummy dipakai.
+        // Kalau firebaseConfig masih placeholder ("GANTI_..."), sudah pasti
+        // tidak akan pernah konek, jadi dummy langsung jalan lebih cepat.
+        // Kalau config sudah kelihatan diisi dengan project asli, beri waktu
+        // lebih lama supaya data sungguhan dari Firebase yang diprioritaskan.
+        const configLooksReal = typeof firebaseConfig !== "undefined" &&
+            firebaseConfig.apiKey && firebaseConfig.apiKey.indexOf("GANTI") === -1;
+        const waitMs = configLooksReal ? 6000 : 1200;
+
         setTimeout(function () {
-            const hasRealData = window.__peatApp && window.__peatApp.lastData;
+            const hasRealData = window.__peatApp && window.__peatApp.lastData && window.__firebaseLiveConnected;
             if (!hasRealData) runDemoSimulation();
-        }, 1800);
+        }, waitMs);
+
+        // Kalau data asli baru datang belakangan (setelah dummy sempat jalan),
+        // otomatis matikan status "mode data contoh" — updateDashboard(data asli)
+        // dari listener utama akan menimpa tampilan dengan sendirinya.
+        document.addEventListener("peatapp:update", function () {
+            if (window.__firebaseLiveConnected) window.__peatDemoActive = false;
+        });
     })();
     </script>
 
@@ -1855,6 +1982,113 @@
                 setTimeout(function () { window.dispatchEvent(new Event("resize")); }, 50);
             });
         }
+    })();
+    </script>
+
+    <!-- ======================================================================
+         SERIAL MONITOR (Indikator) — script tambahan murni. Menampilkan
+         log gaya terminal di bawah kartu Kalibrasi & Pembacaan Sensor,
+         memakai data yang sudah tersedia di window.__peatApp (diisi oleh
+         updateDashboard() yang sudah ada, baik dari Firebase asli maupun
+         dari simulator dummy). Tidak menambah listener Firebase baru.
+         ====================================================================== -->
+    <script>
+    (function () {
+        const logEl = document.getElementById("serial-monitor-log");
+        const statusEl = document.getElementById("serial-monitor-status");
+        if (!logEl || !statusEl) return;
+
+        const MAX_LINES = 60;
+        let bootPrinted = false;
+
+        function ts() {
+            const d = new Date();
+            const hh = String(d.getHours()).padStart(2, "0");
+            const mm = String(d.getMinutes()).padStart(2, "0");
+            const ss = String(d.getSeconds()).padStart(2, "0");
+            const ms = String(d.getMilliseconds()).padStart(3, "0");
+            return `${hh}:${mm}:${ss}.${ms}`;
+        }
+
+        function removeCursor() {
+            const cur = logEl.querySelector(".sm-cursor");
+            if (cur) cur.parentElement.remove();
+        }
+
+        function printLine(html) {
+            removeCursor();
+            const line = document.createElement("div");
+            line.className = "sm-line";
+            line.innerHTML = `<span class="sm-ts">[${ts()}]</span> ${html}`;
+            logEl.appendChild(line);
+            while (logEl.children.length > MAX_LINES) logEl.removeChild(logEl.firstChild);
+
+            const cursorLine = document.createElement("div");
+            cursorLine.className = "sm-line";
+            cursorLine.innerHTML = `<span class="sm-cursor"></span>`;
+            logEl.appendChild(cursorLine);
+
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function printBootSequence() {
+            if (bootPrinted) return;
+            bootPrinted = true;
+            printLine(`<span class="sm-white">gateway.sigap.local booting...</span>`);
+            printLine(`<span class="sm-white">menginisialisasi</span> <span class="sm-blue">NODE-01</span><span class="sm-white"> (suhu),</span> <span class="sm-blue">NODE-02</span><span class="sm-white"> (kelembapan udara),</span> <span class="sm-blue">NODE-03</span><span class="sm-white"> (kelembapan tanah)...</span>`);
+            printLine(`<span class="sm-green">3/3 node sensor terhubung</span>`);
+            printLine(`<span class="sm-cyan">SOURCE</span> <span class="sm-white">mode live/simulasi — otomatis mengikuti koneksi Firebase Realtime Database</span>`);
+        }
+
+        function statusLabel() {
+            if (window.__firebaseLiveConnected) return { cls: "is-live", text: "LIVE" };
+            if (window.__peatDemoActive) return { cls: "is-demo", text: "SIMULASI" };
+            return { cls: "", text: "IDLE" };
+        }
+
+        function refreshStatusBadge() {
+            const s = statusLabel();
+            statusEl.className = "text-[10px] font-bold tracking-wider text-gray-500 font-mono" + (s.cls ? " " + s.cls : "");
+            statusEl.textContent = s.text;
+        }
+
+        function printReadingLine() {
+            const computed = window.__peatApp && window.__peatApp.lastComputed;
+            const data = window.__peatApp && window.__peatApp.lastData;
+            if (!computed || !data) return;
+
+            const suhu = Number(data.suhu ?? 0).toFixed(0);
+            const udara = Number(data.kelembaban_udara ?? 0).toFixed(0);
+            const tanah = Number(data.kelembaban_tanah ?? 0).toFixed(0);
+            const indeks = Math.round(computed.score);
+            const src = window.__firebaseLiveConnected ? "sm-green" : "sm-orange";
+            const srcLabel = window.__firebaseLiveConnected ? "OK" : "SIM";
+
+            printLine(
+                `<span class="sm-blue">NODE-01</span> <span class="sm-white">suhu=${suhu}°C</span>` +
+                `  <span class="sm-blue">NODE-02</span> <span class="sm-white">kelembapan=${udara}%</span>` +
+                `  <span class="sm-blue">NODE-03</span> <span class="sm-white">tanah=${tanah}%</span>` +
+                `  <span class="sm-cyan">→</span> <span class="sm-white">indeks=</span><span class="sm-cyan">${indeks}/100</span>` +
+                `  <span class="${src}">[${srcLabel}]</span>`
+            );
+            refreshStatusBadge();
+        }
+
+        // Cetak urutan boot begitu halaman dimuat.
+        printBootSequence();
+        removeCursor();
+        const initialCursor = document.createElement("div");
+        initialCursor.className = "sm-line";
+        initialCursor.innerHTML = `<span class="sm-cursor"></span>`;
+        logEl.appendChild(initialCursor);
+
+        // Setiap kali dashboard menerima data baru (Firebase asli ATAU dummy),
+        // cetak satu baris pembacaan baru — persis seperti serial monitor asli.
+        document.addEventListener("peatapp:update", printReadingLine);
+
+        // Badge status juga ikut ter-update saat status koneksi Firebase berubah.
+        document.addEventListener("peatapp:demoStarted", refreshStatusBadge);
+        setInterval(refreshStatusBadge, 2000);
     })();
     </script>
 </body>
